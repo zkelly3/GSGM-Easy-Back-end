@@ -1,0 +1,26 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>場景管理</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+<body>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<ul><b>目前有的場景：</b></ul>
+<% for(var i in scenes) { %>
+    <% if(i % 4 == 0) { %>
+        <ul><div style="width:800px;">
+            <div class="row">
+    <% } %>
+                <div class="col-sm-3">
+                    <a href="/e_scene/<%= GID %>/<%= scenes[i].SID %>"><img src="<%=scenes[i].img%>" class="img-responsive"/></a>
+                </div>
+    <% if(i % 4 == 3 || i == scenes.length-1) { %>
+            </div>
+        </div></ul>
+    <% } %>
+<% } %>
+<ul><a href="/new_scene/<%= GID %>">新增場景</a>  |  <a href="/">回去看我的作品</a></ul>
+</body>
+</html>

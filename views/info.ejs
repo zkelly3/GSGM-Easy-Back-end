@@ -1,0 +1,40 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>遊戲基本資訊編輯頁</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+<body onload="init()">
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>
+function init() {
+    $('#goBack').click(function(){
+        if(confirm("要放棄編輯嗎？努力會付諸流水哦~")){
+            window.location.href="/";
+        }
+    });
+}
+</script>
+<form method="post">
+    <ul><b>遊戲名稱：</b><input type=text name="name" required value="<%= locals.info.name %>" class="form-control" style="width:30%;"></ul>
+    <ul><b>遊戲狀態：</b>
+    <label><input type=radio name="status" value="open" <% if(locals.info.is_opened) { %>checked<% } %>>開放</label>
+    <label><input type=radio name="status" value="draft" <% if(!locals.info.is_opened) { %>checked<% } %>>草稿</label></ul>
+    <ul><b>遊戲說明：</b><textarea name="description" class="form-control" style="width:50%;"><%= locals.info.description %></textarea></ul>
+    <% if(!locals.isNew) { %>
+    <ul><b>初始場景：</b><select name="initSID">
+        <option value="no">哪個都不選</option>
+        <% for(var i in locals.scenes) { %>
+            <% if(locals.scenes[i].name) { %>
+        <option value=<%= locals.scenes[i].SID %><%if(locals.info.initSID && locals.info.initSID==locals.scenes[i].SID) {%> selected="selected"<%}%>><%= locals.scenes[i].name %></option>
+            <% } else { %>
+        <option value=<%= locals.scenes[i].SID %><%if(locals.info.initSID && locals.info.initSID==locals.scenes[i].SID) {%> selected="selected"<%}%>>SID=<%= locals.scenes[i].SID %></option>
+            <% } %>
+        <% } %>
+    </select></ul>
+    <% } %>
+    <ul><input type=submit name="submit" value="送出"> <input type=button name="cancel" id="goBack" value="不編輯了喇"></ul>
+</form>
+</body>
+</html>

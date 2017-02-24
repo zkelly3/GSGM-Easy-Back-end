@@ -1,0 +1,129 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>場景編輯頁面</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <style>
+        th {
+            text-align:center;
+        }
+    </style>
+</head>
+<body onload="init()">
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>
+function addArea() {
+    $('table.area').append('<tr><td class="A_number">1.</td><td><input type="text" name="coord" maxlength="500"/></td><td><input type="text" maxlength="50" name="mapname" placeholder="個人辨識用，非必填"/></td><td><a href="javascript: void(0)" class="del_A">刪除</a></td><td><input type=hidden name="mapAID" value=""></td></tr>');
+    $('.del_A').bind("click", function(){
+        $(this).parent().parent().remove();
+        $(".A_number").each(function(index){
+            $(this).text((index+1)+'.');
+        });
+    });
+    $('.A_number').each(function(index){
+        $(this).text((index+1)+'.');
+    });
+}
+
+function addImg() {
+    $('table.img').append('<tr><td class="I_number">1.</td><td><input type="text" name="src" maxlength="200"/></td><td><input type="number" name="x" step="1" max="99999" min="0"/></td><td><input type="number" name="y" step="1" max="99999" min="0"/></td><td><input type="text" name="imgname" maxlength="50" placeholder="個人辨識用，非必填"/></td><td><a href="javascript: void(0)" class="del_I">刪除</a></td><td><input type=hidden name="imgAID" value=""></td></tr>');
+    $('.del_I').bind("click", function(){
+        $(this).parent().parent().remove();
+        $(".I_number").each(function(index){
+            $(this).text((index+1)+'.');
+        });
+    });
+    $('.I_number').each(function(index){
+        $(this).text((index+1)+'.');
+    });
+}
+function init() {
+    $('.del_A').click(function(){
+        $(this).parent().parent().remove();
+        $(".A_number").each(function(index){
+            $(this).text((index+1)+'.');
+        });
+    });
+    $('.del_I').click(function(){
+        $(this).parent().parent().remove();
+        $(".I_number").each(function(index){
+            $(this).text((index+1)+'.');
+        });
+    });
+    $('#goBack').click(function(){
+        if(confirm("要放棄編輯嗎？努力會付諸流水哦~")){
+            window.location.href="/scenes/<%= locals.GID%>";
+        }
+    });
+}
+</script>
+<form method="post">
+    <ul><h4><b>《基本設定》</b></h4>
+        <ul><b>場景名稱：</b><input type=text name="name" value="<%= locals.scene.name %>" class="form-control" style="width:30%;" placeholder="個人辨識用，非必填。"/></ul>
+        <ul><b>背景圖片網址：</b><input type=text name="bgd_img" value="<%= locals.scene.bgd_img %>" class="form-control" style="width:30%;"/></ul>
+    </ul>
+    <hr>
+    <ul><h4><b>《可點擊區域》</b></h4>
+        <ul><table class="table table-striped area" style="width:50%;text-align:center;">
+            <tr>
+                <th></th><th>區域座標</th><th>名稱</th><th></th>
+            </tr>
+            <% if(!locals.isNew && locals.scene.map.length>=1) { %>
+                <% for(var i in locals.scene.map) { %>
+            <tr>
+                <td class="A_number"><%= parseInt(i)+1 %>.</td>
+                <td><input type="text" name="coord" maxlength="500" value="<%= locals.scene.map[i].coord %>"/></td>
+                <td><input type="text" name="mapname" maxlength="50" value="<%= locals.scene.map[i].name %>" placeholder="個人辨識用，非必填"/></td>
+                <td><a href="javascript: void(0)" class="del_A">刪除</a></td>
+                <td><input type=hidden name="mapAID" value=<%= locals.scene.map[i].AID %>></td>
+            </tr>
+                <% } %>
+            <% } else { %>
+            <tr>
+                <td class="A_number">1.</td>
+                <td><input type="text" name="coord" maxlength="500"/></td>
+                <td><input type="text" name="mapname" maxlength="50" placeholder="個人辨識用，非必填"/></td>
+                <td><a href="javascript: void(0)" class="del_A">刪除</a></td>
+                <td><input type=hidden name="mapAID" value=""></td>
+            </tr>
+            <% } %>
+        </table></ul>
+        <ul><a href="javascript: void(0)" onClick="addArea()">＋增加區域</a></ul>
+    </ul>
+    <hr>
+    <ul><h4><b>《置入圖片》</b></h4>
+        <ul><table class="table table-striped img" style="width:70%;text-align:center;">
+            <tr>
+                <th></th><th>圖片網址</th><th>x</th><th>y</th><th>名稱</th><th></th>
+            </tr>
+            <% if(!locals.isNew && locals.scene.imgs.length>=1) { %>
+                <% for(var i in locals.scene.imgs) { %>
+            <tr>
+                <td class="I_number"><%= parseInt(i)+1 %>.</td>
+                <td><input type="text" name="src" maxlength="200" value="<%= locals.scene.imgs[i].src %>"/></td>
+                <td><input type="number" name="x" max="99999" min="0" step="1" value="<%= locals.scene.imgs[i].x %>"/></td>
+                <td><input type="number" name="y" max="99999" min="0" step="1" value="<%= locals.scene.imgs[i].y %>"/></td>
+                <td><input type="text" name="imgname" maxlength="50" value="<%= locals.scene.imgs[i].name %>" placeholder="個人辨識用，非必填"/></td>
+                <td><a href="javascript: void(0)" class="del_I">刪除</a></td>
+                <td><input type=hidden name="imgAID" value=<%= locals.scene.imgs[i].AID %>></td>
+            </tr>
+                <% } %>
+            <% } else { %>
+            <tr>
+                <td class="I_number">1.</td>
+                <td><input type="text" name="src" maxlength="200"/></td>
+                <td><input type="number" name="x" step="1" max="99999" min="0"/></td>
+                <td><input type="number" name="y" step="1" max="99999" min="0"/></td>
+                <td><input type="text" name="imgname" maxlength="50" placeholder="個人辨識用，非必填"/></td>
+                <td><a href="javascript: void(0)" class="del_I">刪除</a></td>
+                <td><input type=hidden name="imgAID" value=""></td>
+            </tr>
+            <% } %>
+        </table></ul>
+        <ul><a href="javascript: void(0)" onClick="addImg()">＋增加圖片</a></ul>
+    </ul>
+    <ul><input type=submit name="submit" value="送出">  <input type=button name="cancel" id="goBack" value="不編輯了喇"></ul>
+</form>
+</body>
+</html>

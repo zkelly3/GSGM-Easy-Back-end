@@ -1,0 +1,47 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title><%= UID %>的個人作品</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <style>
+        body {
+            background-color: #F0E68C;
+        }
+        img .games {
+            max-height: 220px;
+            vertical-align:50%;
+        }
+        .time {
+            color: #A9A9A9;
+        }
+    </style>
+</head>
+<body>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+<% for(var i in locals.games) { %>
+    <div id="game-<%= locals.games[i].name %>" class="games" style="background-color:#B0E0E6;">
+        <div style="width:480px;">
+            <div class="row">
+                <div class="col-sm-4">
+                    <% if(locals.games[i].img) { %>
+                        <img src="<%= locals.games[i].img %>" class="games img-responsive"/>
+                    <% } else { %>
+                        <img src="http://placehold.it/330x220" class="games img-responsive"/>
+                    <% } %>
+                </div>
+                <div class="col-sm-8" style="text-align:left;">
+                    <ul><h5><b><%= locals.games[i].name %></b><% if(!locals.games[i].is_opened){%><span style="color:red;"> (草稿)</span><% } %></h5></ul>
+                    <ul><p class="time">最近修改時間：<%= moment(locals.games[i].time).format('lll') %></p></ul>
+                    <ul><a href="/e_info/<%= locals.games[i].GID %>" target="_top">編輯遊戲基本資訊</a> | <a href="/scenes/<%= locals.games[i].GID %>" target="_top">管理場景</a></ul>
+                    <hr>
+                </div>
+            </div>
+        </div>
+    </div>
+<% } %>
+<a href="/new_info/" target="_top">新增遊戲</a>  |  <a href="/logout">登出</a>
+
+</body>
+</html>
