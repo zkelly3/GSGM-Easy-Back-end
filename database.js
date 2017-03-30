@@ -1,3 +1,21 @@
+Promise.slowAll = function(iterable) {
+    error = false;
+    reason = null;
+    iterable = iterable.map((x) =>
+      x.catch(err => {
+        error = true;
+        reason = err;
+      }));
+    return Promise.all(iterable)
+      .then(values => {
+        if(error) {
+          return Promise.reject(reason);
+        }
+        else {
+          return Promise.resolve(values);
+        }
+      });
+}
 var mysql = require('mysql');
 var connection = mysql.createConnection({
   host: 'localhost',
@@ -10,12 +28,44 @@ var db = {
     /* wrap */
     connect: function() {
         return new Promise(function(resolve, reject) {
-            connection.connect((err)=>{
-                if(err) {
+            connection.connect(function(error) {
+                if(error) {
                     console.error('error connecting: '+err.stack);
-                    reject(err);
+                    reject(error);
+                    return;
                 }
                 resolve();
+            });
+        });
+    },
+    beginTransaction: function(){
+        return new Promise(function(resolve, reject) {
+            connection.beginTransaction(function(error) {
+                if(error) {
+                    reject(error);
+                    return;
+                }
+                resolve();
+            });
+        });
+    },
+    commit: function(){
+        return new Promise(function(resolve, reject) {
+            console.log('commit');
+            connection.commit(function(error) {
+                if(error) {
+                    reject(error);
+                    return;
+                }
+                resolve();
+            });
+        });
+    },
+    rollback: function(error){
+        return new Promise(function(resolve, reject) {
+            console.log('rollback');
+            connection.rollback(function(err) {
+                reject(err);
             });
         });
     },
@@ -26,6 +76,7 @@ var db = {
                     if(error) {
                         console.error(error);
                         reject(error);
+                        return;
                     }
                     resolve(results, fields);
             });
@@ -74,6 +125,12 @@ var db = {
                 };
             });
     },
+    getGameOwner: function(GID) {
+        return db.query('SELECT UID FROM game WHERE GID=?;', [GID])
+            .then(function(results, fields) {
+                return results[0];
+            });
+    },
     updateGameInfo: function(GID, info) {
         if(!isNaN(parseInt(info.initSID))){
             return db.query('UPDATE game SET name=?, description=?, is_opened=?, initSID=? WHERE GID=?;', [info.name, info.description, info.is_opened, info.initSID, GID]);
@@ -98,22 +155,30 @@ var db = {
             });
     },
     updateEditSceneInfo: function(SID, GID, info) {
-        return Promise.all([db.deleteItems(SID), db.deleteSceneMap(SID), db.updateSceneInfo(SID, info.name, info.bgd_img)])
+        return db.beginTransaction()
             .then(function() {
-                return Promise.all([db.insertItems(SID, info.imgs), db.insertSceneMap(SID, info.map)])
+                return Promise.slowAll([db.deleteItems(SID), db.deleteSceneMap(SID), db.updateSceneInfo(SID, info.name, info.bgd_img)]);
+            })
+            .then(function() {
+                return Promise.slowAll([db.insertItems(SID, info.imgs), db.insertSceneMap(SID, info.map)])
                     .then(function() {
                         return db.query('UPDATE game SET last_edit=NOW() WHERE GID=?;', [GID]);
                     });
-            });
+            })
+            .then(function() {return db.commit();}, function(error){return db.rollback(error);});
     },
     insertEditSceneInfo: function(GID, info) {
-        return db.query('INSERT INTO scene(GID, name, img) VALUES(?, ?, ?);', [GID, info.name, info.bgd_img])
+        return db.beginTransaction()
+            .then(function(){
+                return db.query('INSERT INTO scene(GID, name, img) VALUES(?, ?, ?);', [GID, info.name, info.bgd_img])
+            })
             .then(function(results, fields) {
-                return Promise.all([db.insertItems(results.insertId, info.imgs), db.insertSceneMap(results.insertId, info.map)])
+                return Promise.slowAll([db.insertItems(results.insertId, info.imgs), db.insertSceneMap(results.insertId, info.map)])
                     .then(function() {
                         return db.query('UPDATE game SET last_edit=NOW() WHERE GID=?;', [GID]);
                     });
-            });
+            })
+            .then(function() {return db.commit();}, function(error){return db.rollback(error);});
     },
     getSceneInfo: function(SID) {
         return db.query('SELECT name, img FROM scene WHERE SID=?;', [SID])
@@ -142,6 +207,7 @@ var db = {
                 }
                 else{
                     return db.query('INSERT INTO scene_items(SID, type, x, y, imgurl, name) VALUES(?, "image", ?, ?, ?, ?);', [SID, items[i].x, items[i].y, items[i].src, items[i].name]);
+                    //return db.query('INSERT INTO scene_items(SID, type, x, y, imgurl, name) VALUES(?, "image", ?, ?, ?, ?);', [SID, items[i].x, items[i].y, items[i].name]);
                 }
             });
         }
@@ -154,6 +220,7 @@ var db = {
             });
     },
     deleteSceneMap: function(SID) {
+        console.log('delete');
         return db.query('DELETE FROM scene_map WHERE SID=?;', [SID]);
     },
     insertSceneMap: function(SID, map){
@@ -168,6 +235,7 @@ var db = {
                 }
             });
         }
+        console.log('insert');
         return prevPromise;
     }
 }

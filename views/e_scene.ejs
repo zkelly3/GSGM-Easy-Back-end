@@ -13,50 +13,258 @@
 <body onload="init()">
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 <script>
+/* points */
+var points = [];
+
+function Points(x, y) {
+    this.x = x;
+    this.y = y;
+}
+
+
+/* draw */
+
+function drawPoint(point) {
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI, false);
+    ctx.fillStyle = 'red';
+    ctx.fill();
+    ctx.stroke();
+    return;
+}
+function draw() {
+    if(points.length >= 2){
+        ctx.clearRect(0, 0, width, height);
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(img, 0, 0);
+        ctx.globalAlpha = 1;
+        for(var i in points) {
+            drawPoint(points[i]);
+        }
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        var len = points.length;
+        for(let i=1;i<len;i++){
+            ctx.lineTo(points[i].x, points[i].y);
+        }
+        if(len >= 3){
+            ctx.fillStyle = 'green';
+            ctx.globalAlpha = 0.2;
+            ctx.fill();
+            ctx.closePath();
+        }
+        ctx.stroke();
+    }
+    else if(points.length == 1){
+        drawPoint(points[0]);
+    }
+    else{
+        ctx.clearRect(0, 0, width, height);
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(img, 0, 0);
+        ctx.globalAlpha = 1;
+    }
+    return;
+}
+
+
+/* handle mouse */
+
+var mouseIsDown = false;
+var isDragging = false;
+var editing = false;
+
+function handleMouseDown(e) {
+    if(!editing){
+        return;
+    }
+    if(mouseIsDown){
+        mouseIsDown = false;
+        return;
+    }
+    mouseIsDown = true;
+    dragIndex = 0;
+    var point = new Points(parseInt(e.pageX - off.left), parseInt(e.pageY - off.top));
+    for(var i in points) {
+        if((points[i].x - point.x)*(points[i].x - point.x) + (points[i].y - point.y)*(points[i].y - point.y) <= 9) {
+            isDragging=true;
+            return;
+        }
+        dragIndex = parseInt(i)+1;
+    }
+    if(points.length < 10){
+        points.push(point);
+        draw();
+        isDragging=true;
+    }
+}
+
+function handleMouseUp(e){
+    mouseIsDown = false;
+    isDragging = false;
+    return;
+}
+
+function handleMouseMove(e){
+    if(!mouseIsDown) return;
+    var point = new Points(parseInt(e.pageX - off.left), parseInt(e.pageY - off.top));
+    if(isDragging){
+        points[dragIndex] = point;
+        draw();
+    }
+}
+
+function handleMouseOut(e){
+    isDragging = false;
+    return;
+}
+
+
+/* add area or image */
+
 function addArea() {
-    $('table.area').append('<tr><td class="A_number">1.</td><td><input type="text" name="coord" maxlength="500"/></td><td><input type="text" maxlength="50" name="mapname" placeholder="個人辨識用，非必填"/></td><td><a href="javascript: void(0)" class="del_A">刪除</a></td><td><input type=hidden name="mapAID" value=""></td></tr>');
+    $('table.area').append('<tr><td class="A_number">1.</td><td><p></p></td><td><input type="text" maxlength="50" name="mapname" placeholder="個人辨識用，非必填"/></td><td><a href="javascript: void(0)" class="edit">編輯</a> <a href="javascript: void(0)" class="finish" style="display:none;">完成</a> <a href="javascript: void(0)" class="del_A">刪除</a> <a href="javascript: void(0)" class="clear" style="display:none;">清除</a> <input type=hidden name="mapAID" value=""><input type=hidden name="mapAID" value=""><input type=hidden name="coord" value="[]" maxlength="500"/></td></tr>');
     $('.del_A').bind("click", function(){
-        $(this).parent().parent().remove();
-        $(".A_number").each(function(index){
-            $(this).text((index+1)+'.');
-        });
+        if(confirm("確定要刪掉嗎D:")){
+            $(this).parent().parent().remove();
+            $(".A_number").each(function(index){
+                $(this).text((index+1)+'.');
+            });
+        }
     });
     $('.A_number').each(function(index){
         $(this).text((index+1)+'.');
     });
+    $('.edit').bind("click", function(){
+        if(!editing){
+            editing = true;
+            points = JSON.parse($(this).parent().parent().find('input[name="coord"]').val());
+            draw(points);
+            $(this).hide();
+            $(this).parent().find('.del_A').hide();
+            $(this).parent().find('.finish').show();
+            $(this).parent().find('.clear').show();
+        }
+    });
+    $('.finish').bind("click", function(){
+        editing = false;
+        $(this).parent().parent().find('p').text(coordString(points));
+        $(this).parent().parent().find('input[name="coord"]').val(JSON.stringify(points));
+        points = [];
+        draw(points);
+        $(this).hide();
+        $(this).parent().find('.clear').hide();
+        $(this).parent().find('.edit').show();
+        $(this).parent().find('.del_A').show();
+    });
+    $('.clear').bind("click", function(){
+        if(confirm("確定要清除所有座標嗎:O")){
+            points = [];
+            draw(points);
+            $(this).parent().parent().find('p').text("");
+            $(this).parent().parent().find('input[name="coord"]').val(JSON.stringify(points));
+        }
+        return;
+    });
 }
 
 function addImg() {
-    $('table.img').append('<tr><td class="I_number">1.</td><td><input type="text" name="src" maxlength="200"/></td><td><input type="number" name="x" step="1" max="99999" min="0"/></td><td><input type="number" name="y" step="1" max="99999" min="0"/></td><td><input type="text" name="imgname" maxlength="50" placeholder="個人辨識用，非必填"/></td><td><a href="javascript: void(0)" class="del_I">刪除</a></td><td><input type=hidden name="imgAID" value=""></td></tr>');
+    $('table.img').append('<tr><td class="I_number">1.</td><td><input type="text" name="src" maxlength="200"/></td><td><input type="number" name="x" step="1" max="99999" min="0"/></td><td><input type="number" name="y" step="1" max="99999" min="0"/></td><td><input type="text" name="imgname" maxlength="50" placeholder="個人辨識用，非必填"/></td><td><a href="javascript: void(0)" class="del_I">刪除</a> <input type=hidden name="imgAID" value=""></td></tr>');
     $('.del_I').bind("click", function(){
-        $(this).parent().parent().remove();
-        $(".I_number").each(function(index){
-            $(this).text((index+1)+'.');
-        });
+        if(confirm("真的要刪掉嗎D:")){
+            $(this).parent().parent().remove();
+            $(".I_number").each(function(index){
+                $(this).text((index+1)+'.');
+            });
+        }
     });
     $('.I_number').each(function(index){
         $(this).text((index+1)+'.');
     });
 }
+
+
+function coordString(coord) {
+    var result = "";
+    for(var i in coord) {
+        if(i!=0) result += ',';
+        result += coord[i].x + ',' + coord[i].y;
+    }
+    return result;
+}
+
 function init() {
     $('.del_A').click(function(){
-        $(this).parent().parent().remove();
-        $(".A_number").each(function(index){
-            $(this).text((index+1)+'.');
-        });
+        if(confirm("真的要刪掉嗎D:")){
+            $(this).parent().parent().remove();
+            $(".A_number").each(function(index){
+                $(this).text((index+1)+'.');
+            });
+        }
     });
     $('.del_I').click(function(){
-        $(this).parent().parent().remove();
-        $(".I_number").each(function(index){
-            $(this).text((index+1)+'.');
-        });
+        if(confirm("真的要刪掉嗎D:")){
+            $(this).parent().parent().remove();
+            $(".I_number").each(function(index){
+                $(this).text((index+1)+'.');
+            });
+        }
+    });
+    $('.edit').click(function(){
+        if(!editing){
+            editing = true;
+            points = JSON.parse($(this).parent().parent().find('input[name="coord"]').val());
+            draw(points);
+            $(this).hide();
+            $(this).parent().find('.del_A').hide();
+            $(this).parent().find('.finish').show();
+            $(this).parent().find('.clear').show();
+        }
+    });
+    $('.finish').click(function(){
+        editing = false;
+        $(this).parent().parent().find('p').text(coordString(points));
+        $(this).parent().parent().find('input[name="coord"]').val(JSON.stringify(points));
+        points = [];
+        draw(points);
+        $(this).hide();
+        $(this).parent().find('.clear').hide();
+        $(this).parent().find('.edit').show();
+        $(this).parent().find('.del_A').show();
+    });
+    $('.clear').click(function(){
+        if(confirm("確定要清除所有座標嗎:O")){
+            points = [];
+            draw(points);
+            $(this).parent().parent().find('p').text("");
+            $(this).parent().parent().find('input[name="coord"]').val(JSON.stringify(points));
+        }
+        return;
     });
     $('#goBack').click(function(){
         if(confirm("要放棄編輯嗎？努力會付諸流水哦~")){
             window.location.href="/scenes/<%= locals.GID%>";
         }
     });
+    
+    $('#Canvas').mousedown(handleMouseDown);
+    $('#Canvas').mousemove(handleMouseMove);
+    $('#Canvas').mouseup(handleMouseUp);
+    $('#Canvas').mouseout(handleMouseOut);
 }
+
+var img = new Image();
+img.src = '<%= locals.scene.bgd_img %>';
+img.onload = function(){
+    width=this.width;
+    height=this.height;
+    $('#Canvas').attr('width', width).attr('height', height);
+    ctx = $('#Canvas')[0].getContext('2d');
+    ctx.globalAlpha = 0.5;
+    ctx.drawImage(img, 0, 0);
+    ctx.globalAlpha = 1;
+    off = $('#Canvas').offset();
+};
 </script>
 <form method="post">
     <ul><h4><b>《基本設定》</b></h4>
@@ -65,27 +273,36 @@ function init() {
     </ul>
     <hr>
     <ul><h4><b>《可點擊區域》</b></h4>
-        <ul><table class="table table-striped area" style="width:50%;text-align:center;">
+        <ul><canvas id="Canvas">Your browser doesn't like canvas.</canvas></ul>
+        <ul><table class="table table-striped area" style="width:80%;text-align:center;">
             <tr>
-                <th></th><th>區域座標</th><th>名稱</th><th></th>
+                <th></th><th>區域座標</th><th>名稱</th><th>
             </tr>
             <% if(!locals.isNew && locals.scene.map.length>=1) { %>
                 <% for(var i in locals.scene.map) { %>
             <tr>
                 <td class="A_number"><%= parseInt(i)+1 %>.</td>
-                <td><input type="text" name="coord" maxlength="500" value="<%= locals.scene.map[i].coord %>"/></td>
+                <td><p><%= locals.scene.map[i].coordString %></p></td>
                 <td><input type="text" name="mapname" maxlength="50" value="<%= locals.scene.map[i].name %>" placeholder="個人辨識用，非必填"/></td>
-                <td><a href="javascript: void(0)" class="del_A">刪除</a></td>
-                <td><input type=hidden name="mapAID" value=<%= locals.scene.map[i].AID %>></td>
+                <td><a href="javascript: void(0)" class="edit">編輯</a>
+                <a href="javascript: void(0)" class="finish" style="display:none;">完成</a>
+                <a href="javascript: void(0)" class="del_A">刪除</a>
+                <a href="javascript: void(0)" class="clear" style="display:none;">清除</a>
+                <input type=hidden name="mapAID" value=<%= locals.scene.map[i].AID %>>
+                <input type=hidden name="coord" value="<%= locals.scene.map[i].coord %>" maxlength="500"/></td>
             </tr>
                 <% } %>
             <% } else { %>
             <tr>
                 <td class="A_number">1.</td>
-                <td><input type="text" name="coord" maxlength="500"/></td>
+                <td><p></p></td>
                 <td><input type="text" name="mapname" maxlength="50" placeholder="個人辨識用，非必填"/></td>
-                <td><a href="javascript: void(0)" class="del_A">刪除</a></td>
-                <td><input type=hidden name="mapAID" value=""></td>
+                <td><a href="javascript: void(0)" class="edit">編輯</a>
+                <a href="javascript: void(0)" class="finish" style="display:none;">完成</a>
+                <a href="javascript: void(0)" class="del_A">刪除</a>
+                <a href="javascript: void(0)" class="clear" style="display:none;">清除</a>
+                <input type=hidden name="mapAID" value="">
+                <input type=hidden name="coord" maxlength="500" value="[]"/></td>
             </tr>
             <% } %>
         </table></ul>
@@ -105,8 +322,8 @@ function init() {
                 <td><input type="number" name="x" max="99999" min="0" step="1" value="<%= locals.scene.imgs[i].x %>"/></td>
                 <td><input type="number" name="y" max="99999" min="0" step="1" value="<%= locals.scene.imgs[i].y %>"/></td>
                 <td><input type="text" name="imgname" maxlength="50" value="<%= locals.scene.imgs[i].name %>" placeholder="個人辨識用，非必填"/></td>
-                <td><a href="javascript: void(0)" class="del_I">刪除</a></td>
-                <td><input type=hidden name="imgAID" value=<%= locals.scene.imgs[i].AID %>></td>
+                <td><a href="javascript: void(0)" class="del_I">刪除</a>
+                <input type=hidden name="imgAID" value=<%= locals.scene.imgs[i].AID %>></td>
             </tr>
                 <% } %>
             <% } else { %>
@@ -116,14 +333,15 @@ function init() {
                 <td><input type="number" name="x" step="1" max="99999" min="0"/></td>
                 <td><input type="number" name="y" step="1" max="99999" min="0"/></td>
                 <td><input type="text" name="imgname" maxlength="50" placeholder="個人辨識用，非必填"/></td>
-                <td><a href="javascript: void(0)" class="del_I">刪除</a></td>
-                <td><input type=hidden name="imgAID" value=""></td>
+                <td><a href="javascript: void(0)" class="del_I">刪除</a>
+                <input type=hidden name="imgAID" value=""></td>
             </tr>
             <% } %>
         </table></ul>
         <ul><a href="javascript: void(0)" onClick="addImg()">＋增加圖片</a></ul>
     </ul>
     <ul><input type=submit name="submit" value="送出">  <input type=button name="cancel" id="goBack" value="不編輯了喇"></ul>
+    <% if(locals.error){ %><ul><b style="color:red;">剛剛存檔時發生錯誤！</b></ul><% } %>
 </form>
 </body>
-</html>
+</html>   

@@ -21,12 +21,25 @@ app.use(session({
 app.locals.moment = moment;
 
 function auth(req, res, next) {
-    if (!req.session.UID) {
+    if(!req.session.UID){
         res.redirect('/login');
         return;
     }
     next();
 }
+function gameAuth(req, res, next) {
+    GID = req.params.GID;
+    db.getGameOwner(GID)
+        .then(function(result) {
+            if(!result) result = {UID: ""};
+            if(result.UID != req.session.UID){
+                res.redirect('/');
+                return;
+            }
+            next();
+        });
+}
+
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
@@ -48,7 +61,7 @@ app.get('/logout', auth, function(req, res) {
     res.redirect('/login');
     return;
 });
-app.get('/e_info/:GID', auth, function(req, res) {
+app.get('/e_info/:GID', auth, gameAuth, function(req, res) {
     Promise.all([db.getGameInfo(req.params.GID), db.getScenes(req.params.GID)])
         .then(function(data) {
             //console.log(info);
@@ -67,7 +80,8 @@ app.get('/new_info', auth, function(req, res) {
         info: {}
     });
 });
-app.get('/scenes/:GID', auth, function(req, res) {
+app.get('/scenes/:GID', auth, gameAuth, function(req, res) {
+    req.session.error = false;
     db.getScenes(req.params.GID)
         .then(function(scenes) {
             for(let i in scenes){
@@ -82,24 +96,31 @@ app.get('/scenes/:GID', auth, function(req, res) {
             });
         });
 });
-app.get('/new_scene/:GID', auth, function(req, res) {
+app.get('/new_scene/:GID', auth, gameAuth, function(req, res) {
     res.render('e_scene', {
         GID: req.params.GID,
         scene: {},
         isNew: true
     });
 });
-app.get('/e_scene/:GID/:SID', auth, function(req, res) {
+app.get('/e_scene/:GID/:SID', auth, gameAuth, function(req, res) {
     db.getEditSceneInfo(req.params.SID)
         .then(function(data) {   
-            //console.log(info);
             var scene = {};
             scene.name = data[0].name;
             scene.bgd_img = data[0].img;
             var map = [];
             for(let i in data[2]){
+                var coord;
+                if(data[2][i].coords == ""){
+                    coord = [];
+                }
+                else{
+                    coord = JSON.parse(data[2][i].coords);
+                }
                 map.push({
-                    coord: data[2][i].coords,
+                    coord: JSON.stringify(coord),
+                    coordString: coordString(coord),
                     name: data[2][i].name,
                     AID: data[2][i].AID
                 });
@@ -116,11 +137,14 @@ app.get('/e_scene/:GID/:SID', auth, function(req, res) {
                 });
             }
             scene.imgs = imgs;
-            //console.log(scene);
+            if(!req.session.error){
+                req.session.error = false;
+            }
             res.render('e_scene', {
                 GID: req.params.GID,
                 SID: req.params.SID,
                 isNew: false,
+                error: req.session.error,
                 scene: scene
             });
         });
@@ -131,9 +155,7 @@ app.post('/login', function(req, res) {
     if(req.body.stay) req.session.cookie.maxAge = 1000*86400*30;
     res.redirect('/');
 });
-app.post('/e_info/:GID', auth, function(req, res) {
-    //console.log(req.body);
-    //console.log(isNaN(parseInt(req.body.initSID)));
+app.post('/e_info/:GID', auth, gameAuth, function(req, res) {
     var info = {};
     if(req.body.status==='open') info.is_opened = 1;
     else info.is_opened = 0;
@@ -156,16 +178,18 @@ app.post('/new_info/', auth, function(req, res) {
         res.redirect('/');
     });
 });
-app.post('/e_scene/:GID/:SID', auth, function(req, res) {
-    //console.log(req.body);
+app.post('/e_scene/:GID/:SID', auth, gameAuth, function(req, res) {
     var info = wrapSceneInfo(req);
-    //console.log(info);
     db.updateEditSceneInfo(req.params.SID, req.params.GID, info)
-        .then(function() {
+    .then(function() {
+            req.session.error = false;
             res.redirect('/scenes/' + req.params.GID);
-        });
+        }, function(){
+            req.session.error = true;
+            res.redirect('/e_scene/' + req.params.GID + '/' + req.params.SID);
+        })
 });
-app.post('/new_scene/:GID', auth, function(req, res) {
+app.post('/new_scene/:GID', auth, gameAuth, function(req, res) {
     var info = wrapSceneInfo(req);
     //console.log(info);
     db.insertEditSceneInfo(req.params.GID, info)
@@ -222,6 +246,16 @@ function wrapSceneInfo(req){
     }
     return info;
 }
+
+function coordString(coord) {
+    var result = "";
+    for(var i in coord) {
+        if(i!=0) result += ',';
+        result += coord[i].x + ',' + coord[i].y;
+    }
+    return result;
+}
+
 db.connect().then(function() {
     app.listen(10001, function(req, res) {
         console.log('listening to 10001!');
