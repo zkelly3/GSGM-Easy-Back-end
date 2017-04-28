@@ -181,7 +181,7 @@ var db = {
             .then(function() {return db.commit();}, function(error){return db.rollback(error);});
     },
     getSceneInfo: function(SID) {
-        return db.query('SELECT name, img FROM scene WHERE SID=?;', [SID])
+        return db.query('SELECT name, img, AID FROM scene WHERE SID=?;', [SID])
             .then(function(results, fields) {
                 return results[0];
             });
@@ -190,7 +190,7 @@ var db = {
         return db.query('UPDATE scene SET name=?, img=? WHERE SID=?;', [name, bgd_img, SID]);
     },
     getItems: function(SID) {
-        return db.query('SELECT x, y, name, imgurl, AID FROM scene_items WHERE SID=? ORDER BY id ASC;', [SID])
+        return db.query('SELECT id, x, y, name, imgurl, AID FROM scene_items WHERE SID=? ORDER BY id ASC;', [SID])
             .then(function(results, fields) {
                 return results;
             });
@@ -214,13 +214,12 @@ var db = {
         return prevPromise;
     },
     getSceneMap: function(SID) {
-        return db.query('SELECT name, coords, AID FROM scene_map WHERE SID=?;', [SID])
+        return db.query('SELECT id, name, coords, AID FROM scene_map WHERE SID=?;', [SID])
             .then(function(results, fields) {
                 return results;
             });
     },
     deleteSceneMap: function(SID) {
-        console.log('delete');
         return db.query('DELETE FROM scene_map WHERE SID=?;', [SID]);
     },
     insertSceneMap: function(SID, map){
@@ -235,8 +234,83 @@ var db = {
                 }
             });
         }
-        console.log('insert');
         return prevPromise;
+    },
+    getEditActionInfo: function(SID, GID){
+        return Promise.all([db.getEditSceneInfo(SID), db.getActions(SID), db.getScenes(GID)])
+            .then(function(results, fields) {
+                return results;
+            });
+    },
+    updateEditActionInfo: function(SID, data, GID){
+        map = data.map;
+        item = data.item;
+        init = data.init;
+        let prevPromise =  db.beginTransaction();
+        for(let i in map){
+            prevPromise = prevPromise.then(function(){
+                map[i].step2.AID = parseInt(map[i].step2.AID);
+                if(isNaN(map[i].step2.AID) || map[i].step2.AID==0){
+                    return db.insertActionInfo(SID, map[i].step2.actions)
+                        .then(function(AID){
+                            return db.query('UPDATE scene_map SET AID=? WHERE id=?;', [AID, map[i].id]);
+                        });
+                }
+                else{
+                    return db.updateActionInfo(map[i].step2.AID, map[i].step2.actions);
+                }
+            });
+        }
+        for(let i in item){
+            prevPromise = prevPromise.then(function(){
+                item[i].step2.AID = parseInt(item[i].step2.AID);
+                if(isNaN(item[i].step2.AID) || item[i].step2.AID==0){
+                    return db.insertActionInfo(SID, item[i].step2.actions)
+                        .then(function(AID){
+                            return db.query('UPDATE scene_items SET AID=? WHERE id=?;', [AID, item[i].id]);
+                        });
+                }
+                else{
+                    return db.updateActionInfo(item[i].step2.AID, item[i].step2.actions);
+                }
+            });
+        }
+        prevPromise = prevPromise.then(function(){
+           init.step2.AID = parseInt(init.step2.AID);
+            if(isNaN(init.step2.AID) || init.step2.AID==0){
+                return db.insertActionInfo(SID, init.step2.actions)
+                    .then(function(AID){
+                        return db.query('UPDATE scene SET AID=? WHERE SID=?;', [AID, SID]);
+                    });
+            }
+            else{
+                return db.updateActionInfo(init.step2.AID, init.step2.actions);
+            }
+        });
+        prevPromise = prevPromise.then(function(){
+            return db.query('UPDATE game SET last_edit=NOW() WHERE GID=?;', [GID]);
+        });
+        return prevPromise.then(function() {return db.commit();}, function(error){return db.rollback(error);});;
+    },
+    getActions: function(SID){
+        return db.query('SELECT * FROM action WHERE SID=?;', [SID])
+            .then(function(results, fields) {
+                return results;
+            });
+    },
+    updateActionInfo: function(AID, data){
+        var act_data = JSON.stringify(data);
+        return db.query('UPDATE action SET act_data=? WHERE AID=?;', [act_data, AID]);
+    },
+    insertActionInfo: function(SID, data){
+        var act_data = JSON.stringify(data);
+        return db.query('INSERT INTO action(SID, act_data) VALUES(?, ?);', [parseInt(SID), act_data])
+            .then(function(result, field){
+                return result.insertId;
+            });
+    },
+    deleteAction: function(AID){
+        return db.query('DELETE FROM action WHERE AID=?;', [AID]);
     }
-}
+ }
 module.exports = db;

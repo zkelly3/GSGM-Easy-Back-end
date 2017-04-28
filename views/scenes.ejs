@@ -5,6 +5,23 @@
     <title>場景管理</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 </head>
+<style>
+.onImg{
+    position: relative;
+    bottom: 20px;
+    height: 20px;
+    background-color: rgba(128, 128, 128, 0.5);
+    text-align: center;;
+}
+.box{
+}
+.bar{
+    text-align: center;
+    position: relative;
+    bottom: 10px;
+    height: 20px;
+}
+</style>
 <body>
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 <ul><b>目前有的場景：</b></ul>
@@ -14,7 +31,9 @@
             <div class="row">
     <% } %>
                 <div class="col-sm-3">
-                    <a href="/e_scene/<%= GID %>/<%= scenes[i].SID %>"><img src="<%=scenes[i].img%>" class="img-responsive"/></a>
+                    <img src="<%=scenes[i].img%>" class="img-responsive"/>
+                    <div class="onImg"><b><span style="color:white;"><%= scenes[i].name %></span></b></div>
+                    <div class="row bar"><a href="/e_scene/<%= GID %>/<%= scenes[i].SID %>">設定圖片</a> | <a href="/e_action/<%= GID %>/<%= scenes[i].SID %>">設定動作</a></div>
                 </div>
     <% if(i % 4 == 3 || i == scenes.length-1) { %>
             </div>

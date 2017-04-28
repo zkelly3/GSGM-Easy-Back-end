@@ -17,7 +17,7 @@ function init() {
 }
 </script>
 <form method="post">
-    <ul><b>遊戲名稱：</b><input type=text name="name" required value="<%= locals.info.name %>" class="form-control" style="width:30%;"></ul>
+    <ul><b>遊戲名稱：</b><input type=text name="name" maxlength="50" required value="<%= locals.info.name %>" class="form-control" style="width:30%;"></ul>
     <ul><b>遊戲狀態：</b>
     <label><input type=radio name="status" value="open" <% if(locals.info.is_opened) { %>checked<% } %>>開放</label>
     <label><input type=radio name="status" value="draft" <% if(!locals.info.is_opened) { %>checked<% } %>>草稿</label></ul>
@@ -25,7 +25,6 @@ function init() {
     <% if(!locals.isNew) { %>
     <ul><b>初始場景：</b><select name="initSID">
         <option value="no">哪個都不選</option>
-        <% for(var i in locals.scenes) { %>
             <% if(locals.scenes[i].name) { %>
         <option value=<%= locals.scenes[i].SID %><%if(locals.info.initSID && locals.info.initSID==locals.scenes[i].SID) {%> selected="selected"<%}%>><%= locals.scenes[i].name %></option>
             <% } else { %>

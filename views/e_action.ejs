@@ -1,0 +1,453 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>場景動作編輯頁面</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+<body onload="start()">
+<link rel="stylesheet" type="text/css" href="/static/e_action.css"/>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script>
+var param;
+var init = $.parseJSON('<%-JSON.stringify(locals.init)%>');
+var map = $.parseJSON('<%-JSON.stringify(locals.map)%>');
+var item = $.parseJSON('<%-JSON.stringify(locals.item)%>');
+var scenes = $.parseJSON('<%-JSON.stringify(locals.scene)%>');
+var step2;
+var options = [];
+var type;
+var selection;
+
+//get index by id
+function getIndex(id, arr){
+    id = parseInt(id);
+    if(id<0 || isNaN(id)) return -1;
+    for(let i in arr){
+        if(id==arr[i].id){
+            return i;
+        }
+    }
+    return -1;
+}
+
+//find the first one that use this action
+function findRoot(s_step2){
+    if(s_step2.actions.length==0 || s_step2.actions[0].type!='use'){
+        return s_step2;
+    }
+    var o_type = s_step2.actions[0].tname;
+    var o_id = s_step2.actions[0].typeid;
+    if(o_type=='init'){
+       return findRoot(init.step2); 
+    }
+    else if(o_type=='map'){
+        var index = getIndex(o_id, map);
+        return findRoot(map[index].step2);
+    }
+    else if(o_type=='item'){
+        var index = getIndex(o_id, item);
+        return findRoot(item[index].step2);
+    }
+    else{
+        var tmp = {};
+        tmp.actions = [];
+        tmp.isSelf = false;
+        return tmp;
+    }
+}
+
+//render actions
+function bringData(type, selection){
+    if(step2==null){
+        $('.sthchecked').hide();
+        $('.nochecked').show();
+    }
+    else{
+        if(step2.isSelf){
+            $('#tb2').removeClass('tab_active');
+            $('#tb1').addClass('tab_active');
+            $('#tabs-2').hide();
+            $('#tabs-1').show();
+            bringSelfData();
+        }
+        else{
+            var o_step2 = findRoot(step2);
+            $('#tb1').removeClass('tab_active');
+            $('#tb2').addClass('tab_active');
+            $('#tabs-1').hide();
+            $('#tabs-2').show();
+            bringOtherData(type, selection, o_step2);
+        }
+        $('.nochecked').hide();
+        $('.sthchecked').show();
+    }
+}
+function bringSelfData(){
+    bringDiv('.actions', step2);
+}
+function bringOtherData(type, selection, o_step2){
+    prepareOption(type, selection);
+    $('#tabs-2').find('select[name="useothers"]').empty();
+    $('#tabs-2').find('select[name="useothers"]').append('<option value="" disabled selected hidden>===選擇動作===</option>');
+    for(let i in options){
+        if(step2.actions.length==0 || step2.actions[0].tname!=options[i].type || step2.actions[0].typeid!=options[i].id){
+            $('#tabs-2').find('select[name="useothers"]').append($('<option>').val(i).text(options[i].name));
+        }
+        else{
+            $('#tabs-2').find('select[name="useothers"]').append($('<option>').val(i).text(options[i].name).prop('selected', 'selected'));
+        }
+    }
+    bringDiv('.o_actions', o_step2, true);
+}
+function bringDiv(where, s_step2, readonly){
+    $(where).empty();
+    if(readonly){
+        $(where).append($('<div>').addClass('o_div'));
+    }
+    for(let i in s_step2.actions){
+        if(s_step2.actions.length==0) return;
+        else if(s_step2.actions[i].type == "msg"){
+            var $tmp = $('.Tdialog').clone();
+            $tmp.appendTo(where).removeClass().addClass('dialog');
+            $tmp.find('input[name="speaker"]').val(s_step2.actions[i].speaker);
+            $tmp.find('input[name="content"]').val(s_step2.actions[i].msg);
+            $tmp.find('.delete').bind("click", function(){
+                if(confirm("真的要刪掉這個動作嗎OAO")){
+                    $(this).parent().remove();
+                    saveData();
+                }
+            });
+            $tmp.show();
+        }
+        else if(s_step2.actions[i].type == "scene"){
+            var $tmp = $('.Tchgscene').clone();
+            $tmp.appendTo(where).removeClass().addClass('chgscene');
+            $tmp.find('option[value="'+s_step2.actions[i].SID+'"]').prop('selected', 'selected');
+            $tmp.find('.delete').bind("click", function(){
+                if(confirm("真的要刪掉這個動作嗎OAO")){
+                    $(this).parent().remove();
+                    saveData();
+                }
+            });
+            $tmp.show();
+        }
+        else if(s_step2.actions[i].type == "var"){
+            var $tmp = $('.Tvariable').clone();
+            $tmp.appendTo(where).removeClass().addClass('variable');
+            $tmp.find('input[name="variable"]').val(s_step2.actions[i].name);
+            $tmp.find('input[name="value"]').val(s_step2.actions[i].value);
+            $tmp.find('.delete').bind("click", function(){
+                if(confirm("真的要刪掉這個動作嗎OAO")){
+                    $(this).parent().remove();
+                    saveData();
+                }
+            });
+            $tmp.show();
+        }
+        bindEvent(s_step2.actions[i].type);
+    }
+}
+
+//prepare options
+function prepareOption(type, id){
+    options = [];
+    options.push({
+        type: 'init',
+        id: 0,
+        name: '自動執行'
+    });
+    for(let i in map){
+        options.push({
+            type: 'map',
+            id: map[i].id,
+            name: '區域-'+map[i].name
+        });
+    }
+    for(let i in item){
+        options.push({
+            type: 'item',
+            id: item[i].id,
+            name: '圖片-'+item[i].name
+        });
+    }
+    for(let i in options){
+        if(type==options[i].type && id==options[i].id){
+            options.splice(i, 1);
+            break;
+        }
+    }
+}
+
+//transform div to data
+function transData(){
+    var result = [];
+    $('.actions').children().each(function(){
+        if($(this).hasClass('dialog')){
+            var speaker = $(this).find('input[name="speaker"]').val();
+            var msg = $(this).find('input[name="content"]').val();
+            result.push({
+                type: "msg",
+                speaker: speaker,
+                msg: msg
+            });
+        }
+        else if($(this).hasClass('chgscene')){
+            var id = parseInt($(this).find('option:selected').val());
+            result.push({
+                type: "scene",
+                SID: id
+            });
+        }
+        else if($(this).hasClass('variable')){
+            var name = $(this).find('input[name="variable"]').val();
+            var value = $(this).find('input[name="value"]').val();
+            result.push({
+                type: "var",
+                name: name,
+                value: value
+            });
+        }
+    });
+    //console.log(result);
+    return result;
+}
+
+function saveData(){
+    step2.actions = transData();
+    bringData(type, selection);
+}
+function clearData(isSelf){
+    step2.actions = [];
+    step2.isSelf = isSelf;
+}  
+     
+function bindEvent(type){
+    if(type=="msg" || type=="var"){
+        $('.gray input').bind("change", function(){
+            saveData();
+        });
+    }
+    else if(type=="scene"){
+        $('.gray select').bind("change", function(){
+            saveData();
+        });
+    }
+}
+function start(){       
+    $('.actions').sortable().disableSelection();
+    
+    //check radio and select
+    $('select').on("click", function(){
+        $(this).parent().find('input:radio').prop('checked', true).trigger("click");
+    });
+    $('input:radio').on("click", function(){
+        type = $('input:radio:checked').val();
+        selection = parseInt($('input:radio:checked').closest('label').find('option:selected').val());
+        if(type == 'init'){
+            selection = 0;
+            step2 = init.step2;
+        }
+        else if(type == 'map'){
+            if(isNaN(selection)){
+                step2 = null;
+            }
+            else{
+                var index = getIndex(selection, map);
+                step2 = map[index].step2;
+            }
+        }
+        else if(type == 'item'){
+            if(isNaN(selection)){
+                step2 = null;
+            }
+            else{
+                var index = getIndex(selection, item);
+                step2 = item[index].step2;
+            }
+        }
+        else{
+            step2 = null;
+        }
+        bringData(type, selection);
+    });
+    
+    //change tab
+    $('#tb1').on( "click", function(e){
+        if(!$('#tb1').hasClass('tab_active')){
+            if(confirm("真的要換到另一個分頁嗎? 編輯過的動作會通通不見喔(´・ω・｀)")){
+                clearData(true);
+                bringData(type, selection);    
+            }
+            else return false;
+        }
+        else return false;
+    });
+    $('#tb2').on( "click", function(e){
+        if(!$('#tb2').hasClass('tab_active')){
+            if(confirm("真的要換到另一個分頁嗎? 編輯過的動作會通通不見喔(´・ω・｀)")){
+                clearData(false);
+                bringData(type, selection);    
+            }
+            else return false;
+        }
+        else return false;
+    });
+    
+    //bind event to click buttons
+    $('#dialog').on("click", function(){
+        var $tmp = $('.Tdialog').clone();
+        $tmp.appendTo('.actions').removeClass().addClass('dialog').show();
+        $tmp.find('.delete').bind("click", function(){
+            if(confirm("真的要刪掉這個動作嗎OAO")){
+                $(this).parent().remove();
+                saveData();
+            }
+        });
+        bindEvent("msg");
+    });
+    $('#chgscene').on("click", function(){
+        var $tmp = $('.Tchgscene').clone();
+        $tmp.appendTo('.actions').removeClass().addClass('chgscene').show();
+        $tmp.find('.delete').bind("click", function(){
+            if(confirm("真的要刪掉這個動作嗎OAO")){
+                $(this).parent().remove();
+                saveData();
+            }
+        });
+        bindEvent("scene");
+    });
+    $('#variable').on("click", function(){
+        var $tmp = $('.Tvariable').clone();
+        $tmp.appendTo('.actions').removeClass().addClass('variable').show();
+        $tmp.find('.delete').bind("click", function(){
+            if(confirm("真的要刪掉這個動作嗎OAO")){
+                $(this).parent().remove();
+                saveData();
+            }
+        });
+        bindEvent("var");
+    });
+    
+    //select others' actions
+    $('#tabs-2').find('select[name="useothers"]').on("change", function(){
+        var o_index = parseInt($(this).find('option:selected').val());
+        step2.actions = [{
+            type: 'use',
+            tname: options[o_index].type,
+            typeid: options[o_index].id
+        }];
+        bringData(type, selection);
+    });
+    
+    //on change save data
+    $('.actions').on("sortupdate", function(event, ui){
+        saveData();
+    });
+    $('.gray select').on("change", function(){
+        saveData();
+    });
+    $('.gray input').on("change", function(){
+        saveData();
+    });
+    
+    //save data or not
+    $('#save').on("click", function(){
+        if(!step2.isSelf && isNaN(parseInt($('#tabs-2').find('option:selected').val()))){
+            alert("請先選擇要使用的動作！");
+            return;
+        }
+        var data = {
+            init: init,
+            map: map,
+            item: item
+        };
+        $.post('/e_action/<%=locals.GID%>/<%=locals.scene.SID%>', data, function(res){
+            window.location.href = res.url;
+        }, 'json');
+    });
+    $('#not_save').on("click", function(){
+        if(confirm("真的不編輯惹嗎:O努力會付諸流水喔OUO")){
+            window.location.href = '/scenes/'+<%= locals.GID %>;
+        }
+    });
+}
+</script>
+<form method="post">
+    <h4><b>設定動作</b><span class="title" style="margin-left:30px;font-size:15px;vertical-align:text-bottom;">場景：<%= locals.scene.name %></span></h4><hr>
+    <ul><div class="circle">1</div>選擇要設定動作的事件：
+        <div class="box">
+            <label><input type=radio name="event" value="init">進入場景後自動執行</input></label><br>
+            <label><input type=radio name="event" value="map">點擊區域：<select name="map">
+                <option value="" disabled selected hidden>===選擇點擊區域===</option>
+                <% for(let i in locals.map){ %>
+                <option value="<%= locals.map[i].id %>"><%= locals.map[i].name %></option>
+                <% } %>
+            </select>
+            </input></label><br>
+            <label><input type=radio name="event" value="item">點擊圖片：<select name="item">
+                <option value="" disabled selected hidden>===選擇點擊圖片===</option>
+                <% for(let i in locals.item){ %>
+                <option value="<%= locals.item[i].id %>"><%= locals.item[i].name %></option>
+                <% } %>
+            </select>
+            </input></label><br>
+        </div></ul>
+    <ul><div class="circle">2</div>
+        <div class="box">
+            設定動作內容
+                <div class="nochecked">↑尚未選擇要設定動作的事件</div>
+                <div class="sthchecked">
+                    <div id="tabs">
+                        <div class="tab_container">
+                            <div id="tb1" class="tab">自訂動作</div>
+                            <div id="tb2" class="tab">使用現有動作</div>
+                        </div><br>
+                        <div id="tabs-1" style="display:none;">
+                            <div class="actions"></div>
+                            <div class="chooseact">
+                                + 選擇動作種類：
+                                <div class="button" id="dialog">顯示對話</div>
+                                <div class="button" id="chgscene">切換場景</div>
+                                <div class="button" id="variable">儲存參數</div>
+                                <div class="button" id="ifelse">條件判斷</div>
+                            </div>
+                            <hr>
+                        </div>
+                        <div id="tabs-2" style="display:none;">
+                            <div class="o_actions"><div class="o_div"></div></div>
+                            <div class="chooseact">
+                                直接使用同場景其他事件的動作：<select name="useothers">
+                                <option value="" disabled selected hidden>===選擇動作===</option></select>
+                            </div>
+                            <hr>
+                        </div>
+                    </div>
+                </div>
+        </div>
+    <div style="height:50px;width:600px;line-height:40px;">
+        <div class="button" style="margin-top:5px;" id="save">儲存</div>
+        <div class="button" style="margin-top:5px;" id="not_save">不編輯了喇</div>
+    </div></ul>
+</form>
+<div style="display:none;" class="Tdialog">
+    <div class="gray">
+        <input type=text name="speaker" placeholder="人名"></input>說：<input type=text name="content"></input></div><div class="delete">X</div>
+</div>
+<div style="display:none;" class="Tchgscene">
+    <div class="gray">
+        切換場景到<select name="chgscene">
+                    <option value="" disabled selected hidden>===選擇場景===</option>
+                    <% for(let i in scenes){ if(locals.SID!=scenes[i].SID){%>
+                        <option value=<%= scenes[i].SID %>><%= scenes[i].name %></option>
+                    <%}}%>
+                </select></div><div class="delete">X</div>
+</div>
+<div style="display:none;" class="Tvariable">
+    <div class="gray">
+        把<input type=text name="variable" placeholder="參數名稱"></input>的值設為<input type=text name="value"></input></div><div class="delete">X</div>
+</div>
+</body>
+</html>   

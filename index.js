@@ -149,6 +149,113 @@ app.get('/e_scene/:GID/:SID', auth, gameAuth, function(req, res) {
             });
         });
 });
+app.get('/e_action/:GID/:SID', auth, gameAuth, function(req, res) {
+    db.getEditActionInfo(req.params.SID, req.params.GID)
+        .then(function(data) {
+            var scene = {};
+            scene.name = data[0][0].name;
+            scene.SID = req.params.SID;
+            
+            var map = [];
+            for(let i in data[0][2]){
+                var index = findActIndex(data[0][2][i].AID, data[1]);
+                var AID;
+                var actions;
+                var isSelf;
+                if(index>-1){
+                    AID = parseInt(data[1][index].AID);
+                    actions = JSON.parse(data[1][index].act_data);
+                    isSelf = (actions.length==0 || actions[0].type!='use');
+                }
+                else{
+                    AID = 0;
+                    actions = [];
+                    data[0][2][i].AID = 0;
+                    isSelf = true;
+                }
+                var step2 = {};
+                step2.AID = AID;
+                step2.actions = actions;
+                step2.isSelf = isSelf;
+                map.push({
+                    id: data[0][2][i].id,
+                    name: data[0][2][i].name,
+                    step2: step2
+                });
+            }
+            
+            var item = [];
+            for(let i in data[0][1]){
+                var index = findActIndex(data[0][1][i].AID, data[1]);
+                var AID;
+                var actions;
+                var isSelf;
+                if(index>-1){
+                    AID = parseInt(data[1][index].AID);
+                    actions = JSON.parse(data[1][index].act_data);
+                    isSelf = (actions.length==0 || actions[0].type!='use');
+                }
+                else{
+                    AID = 0;
+                    actions = [];
+                    isSelf = true;
+                }
+                var step2 = {};
+                step2.AID = AID;
+                step2.actions = actions;
+                step2.isSelf = isSelf;
+                item.push({
+                    id: data[0][1][i].id,
+                    name: data[0][1][i].name,
+                    step2: step2
+                });
+            }
+
+            var AID;
+            var actions;
+            var isSelf;
+            var exist = false;
+            for(let i in data[1]){
+                if(data[1][i].AID == data[0][0].AID){
+                    AID = parseInt(data[1][i].AID);
+                    actions = JSON.parse(data[1][i].act_data);
+                    isSelf = (actions.length==0 || actions[0].type!='use');
+                    break;
+                }
+            }
+            if(isNaN(AID) || AID==0){
+                AID = 0;
+                actions = [];
+                isSelf = true;
+            }
+            
+            var init = {};
+            var step2 = {}
+            step2.AID = AID;
+            step2.actions = actions;
+            step2.isSelf = isSelf;
+            init.step2 = step2;
+            
+            var scenes = [];
+            for(let i in data[2]){
+                scenes.push({
+                    SID: data[2][i].SID,
+                    name: data[2][i].name
+                });
+            }
+            console.log(init);
+            console.log(map);
+            console.log(item);
+            res.render('e_action',{
+                GID: req.params.GID,
+                scene: scene,
+                scenes: scenes,
+                init: init,
+                map: map,
+                item: item
+            });
+        });
+});
 
 app.post('/login', function(req, res) {
     req.session.UID = req.body.UID;
@@ -191,10 +298,23 @@ app.post('/e_scene/:GID/:SID', auth, gameAuth, function(req, res) {
 });
 app.post('/new_scene/:GID', auth, gameAuth, function(req, res) {
     var info = wrapSceneInfo(req);
-    //console.log(info);
     db.insertEditSceneInfo(req.params.GID, info)
         .then(function() {
             res.redirect('/scenes/' + req.params.GID);
+        });
+});
+app.post('/e_action/:GID/:SID', auth, gameAuth, function(req, res) {
+    var data = req.body;
+    if(!data.init.step2.actions) data.init.step2.actions = [];
+    for(let i in data.map){
+        if(!data.map[i].step2.actions) data.map[i].step2.actions = [];
+    }
+    for(let i in data.item){
+        if(!data.item[i].step2.actions) data.item[i].step2.actions = [];
+    }
+    db.updateEditActionInfo(req.params.SID, data, req.params.GID)
+        .then(function(){
+            res.send({url:'/scenes/'+req.params.GID});
         });
 });
 
@@ -249,11 +369,25 @@ function wrapSceneInfo(req){
 
 function coordString(coord) {
     var result = "";
-    for(var i in coord) {
+    for(let i in coord) {
         if(i!=0) result += ',';
         result += coord[i].x + ',' + coord[i].y;
     }
     return result;
+}
+function findActIndex(AID, actions){
+    if(AID==null){
+        return -1;
+    }
+    for(let i in actions){
+        if(AID==actions[i].AID){
+            return i;
+        }
+    }
+    return -1;
+}
+function str2Bool(str){
+    return str===true || str==='true';
 }
 
 db.connect().then(function() {

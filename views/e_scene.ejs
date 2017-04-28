@@ -123,7 +123,7 @@ function handleMouseOut(e){
 /* add area or image */
 
 function addArea() {
-    $('table.area').append('<tr><td class="A_number">1.</td><td><p></p></td><td><input type="text" maxlength="50" name="mapname" placeholder="個人辨識用，非必填"/></td><td><a href="javascript: void(0)" class="edit">編輯</a> <a href="javascript: void(0)" class="finish" style="display:none;">完成</a> <a href="javascript: void(0)" class="del_A">刪除</a> <a href="javascript: void(0)" class="clear" style="display:none;">清除</a> <input type=hidden name="mapAID" value=""><input type=hidden name="mapAID" value=""><input type=hidden name="coord" value="[]" maxlength="500"/></td></tr>');
+    $('table.area').append('<tr><td class="A_number">1.</td><td><p></p></td><td><input type="text" maxlength="50" name="mapname" required/></td><td><a href="javascript: void(0)" class="edit">編輯</a> <a href="javascript: void(0)" class="finish" style="display:none;">完成</a> <a href="javascript: void(0)" class="del_A">刪除</a> <a href="javascript: void(0)" class="clear" style="display:none;">清除</a> <input type=hidden name="mapAID" value=""><input type=hidden name="mapAID" value=""><input type=hidden name="coord" value="[]" maxlength="500"/></td></tr>');
     $('.del_A').bind("click", function(){
         if(confirm("確定要刪掉嗎D:")){
             $(this).parent().parent().remove();
@@ -169,7 +169,7 @@ function addArea() {
 }
 
 function addImg() {
-    $('table.img').append('<tr><td class="I_number">1.</td><td><input type="text" name="src" maxlength="200"/></td><td><input type="number" name="x" step="1" max="99999" min="0"/></td><td><input type="number" name="y" step="1" max="99999" min="0"/></td><td><input type="text" name="imgname" maxlength="50" placeholder="個人辨識用，非必填"/></td><td><a href="javascript: void(0)" class="del_I">刪除</a> <input type=hidden name="imgAID" value=""></td></tr>');
+    $('table.img').append('<tr><td class="I_number">1.</td><td><input type="text" name="src" maxlength="200"/></td><td><input type="number" name="x" step="1" max="99999" min="0"/></td><td><input type="number" name="y" step="1" max="99999" min="0" required/></td><td><input type="text" name="imgname" maxlength="50" required/></td><td><a href="javascript: void(0)" class="del_I">刪除</a> <input type=hidden name="imgAID" value=""></td></tr>');
     $('.del_I').bind("click", function(){
         if(confirm("真的要刪掉嗎D:")){
             $(this).parent().parent().remove();
@@ -268,7 +268,7 @@ img.onload = function(){
 </script>
 <form method="post">
     <ul><h4><b>《基本設定》</b></h4>
-        <ul><b>場景名稱：</b><input type=text name="name" value="<%= locals.scene.name %>" class="form-control" style="width:30%;" placeholder="個人辨識用，非必填。"/></ul>
+        <ul><b>場景名稱：</b><input type=text name="name" value="<%= locals.scene.name %>" class="form-control" style="width:30%;"/></ul>
         <ul><b>背景圖片網址：</b><input type=text name="bgd_img" value="<%= locals.scene.bgd_img %>" class="form-control" style="width:30%;"/></ul>
     </ul>
     <hr>
@@ -283,7 +283,7 @@ img.onload = function(){
             <tr>
                 <td class="A_number"><%= parseInt(i)+1 %>.</td>
                 <td><p><%= locals.scene.map[i].coordString %></p></td>
-                <td><input type="text" name="mapname" maxlength="50" value="<%= locals.scene.map[i].name %>" placeholder="個人辨識用，非必填"/></td>
+                <td><input type="text" name="mapname" maxlength="50" value="<%= locals.scene.map[i].name %>" required/></td>
                 <td><a href="javascript: void(0)" class="edit">編輯</a>
                 <a href="javascript: void(0)" class="finish" style="display:none;">完成</a>
                 <a href="javascript: void(0)" class="del_A">刪除</a>
@@ -296,7 +296,7 @@ img.onload = function(){
             <tr>
                 <td class="A_number">1.</td>
                 <td><p></p></td>
-                <td><input type="text" name="mapname" maxlength="50" placeholder="個人辨識用，非必填"/></td>
+                <td><input type="text" name="mapname" maxlength="50" required/></td>
                 <td><a href="javascript: void(0)" class="edit">編輯</a>
                 <a href="javascript: void(0)" class="finish" style="display:none;">完成</a>
                 <a href="javascript: void(0)" class="del_A">刪除</a>
@@ -321,7 +321,7 @@ img.onload = function(){
                 <td><input type="text" name="src" maxlength="200" value="<%= locals.scene.imgs[i].src %>"/></td>
                 <td><input type="number" name="x" max="99999" min="0" step="1" value="<%= locals.scene.imgs[i].x %>"/></td>
                 <td><input type="number" name="y" max="99999" min="0" step="1" value="<%= locals.scene.imgs[i].y %>"/></td>
-                <td><input type="text" name="imgname" maxlength="50" value="<%= locals.scene.imgs[i].name %>" placeholder="個人辨識用，非必填"/></td>
+                <td><input type="text" name="imgname" maxlength="50" value="<%= locals.scene.imgs[i].name %>" required/></td>
                 <td><a href="javascript: void(0)" class="del_I">刪除</a>
                 <input type=hidden name="imgAID" value=<%= locals.scene.imgs[i].AID %>></td>
             </tr>
@@ -332,7 +332,7 @@ img.onload = function(){
                 <td><input type="text" name="src" maxlength="200"/></td>
                 <td><input type="number" name="x" step="1" max="99999" min="0"/></td>
                 <td><input type="number" name="y" step="1" max="99999" min="0"/></td>
-                <td><input type="text" name="imgname" maxlength="50" placeholder="個人辨識用，非必填"/></td>
+                <td><input type="text" name="imgname" maxlength="50" required/></td>
                 <td><a href="javascript: void(0)" class="del_I">刪除</a>
                 <input type=hidden name="imgAID" value=""></td>
             </tr>

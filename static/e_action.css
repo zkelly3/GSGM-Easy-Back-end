@@ -1,0 +1,140 @@
+.circle{
+    height: 20px;
+    width: 20px;
+    border-radius:50%;
+    background-color: gray;
+    display: inline-block;
+    color: white;
+    text-align: center;
+}
+.box{
+    display: inline-block;
+    vertical-align: text-top;
+    min-height: 128px;
+}
+#tabs{
+    width: 625px;
+    min-height: 168px;
+    position: relative;
+}
+#tabs-1{
+    width: 600px;
+    min-height: 128px;
+    position: relative;
+    margin-left: 20px;
+}
+#tabs-2{
+    width: 600px;
+    min-height: 128px;
+    position: relative;
+    margin-left: 20px;
+}
+.tab_container{
+    width: 600px;
+    padding-top: 8px;
+    padding-left: 8px;
+    border: 1px solid;
+    border-color: #778899;
+    border-radius: 2px;
+    background-color: #DCDCDC;
+}
+.tab{
+    cursor: pointer;
+    text-align: center;
+    padding: 5px;
+    background-color: #eee;
+    border-top-right-radius: 2px;
+    border-top-left-radius: 2px;
+    display: inline-block;
+}
+.tab_active{
+    cursor: default;
+    background-color: #7DB9DE;
+    color: white;
+}
+.nochecked{
+    width: 625px;
+    height: 168px;
+    text-align: center;
+    padding-top: 64px;
+    position: relative;
+    border: 1px solid;
+    border-color: rgba(200, 200, 200, 1);
+    border-radius: 2px;
+}
+.sthchecked{
+    width: 625px;
+    min-height: 168px;
+    display: none;
+    position: relative;
+    left: 0px;
+    top: 0px;
+    border: 1px solid;
+    border-color: rgba(200, 200, 200, 1);
+    border-radius: 2px;
+}
+.button{
+    height: 30px;
+    width: 100px;
+    border-radius: 5em;
+    border: 1px solid gray;
+    text-align: center;
+    vertical-align: middle;
+    display: inline-block;
+    cursor: pointer;
+    line-height: 30px;
+}
+.button:hover{
+    background-color: rgba(200, 200, 200, 1);
+}    
+.chooseact{
+    position: relative;
+    top: 15px;
+    height: 40px;
+    width: 550px;
+    left: 10px;
+    text-align: center;
+}
+.action{
+    min-height: 0px;
+}
+.o_action{
+    min-height: 0px;
+    overflow: hidden;
+}
+.o_div{
+    height: 100%;
+    width: 100%;
+    z-index: 999;
+    position: relative;
+}
+.variable{
+    height:50px;
+    width: 600px;
+}
+.dialog{
+    height:50px;
+    width: 600px;
+}
+.chgscene{
+    height:50px;
+    width: 600px;
+}
+.gray{
+    height: 49px;
+    width: 565px;
+    background-color:rgba(200, 200, 200, 1);
+    padding-top: 12px;
+    padding-left: 10px;
+    display: inline-block;
+}
+.delete{
+    height: 49px;
+    width: 30px;
+    top: 0px;
+    padding-top: 12px;
+    cursor: pointer;
+    text-align: center;
+    display: inline-block;
+    position: relative;
+}
