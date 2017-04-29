@@ -104,9 +104,6 @@ function bringOtherData(type, selection, o_step2){
 }
 function bringDiv(where, s_step2, readonly){
     $(where).empty();
-    if(readonly){
-        $(where).append($('<div>').addClass('o_div'));
-    }
     for(let i in s_step2.actions){
         if(s_step2.actions.length==0) return;
         else if(s_step2.actions[i].type == "msg"){
@@ -148,6 +145,9 @@ function bringDiv(where, s_step2, readonly){
             $tmp.show();
         }
         bindEvent(s_step2.actions[i].type);
+    }
+    if(readonly){
+        $(where).append($('<div>').addClass('o_div'));
     }
 }
 
