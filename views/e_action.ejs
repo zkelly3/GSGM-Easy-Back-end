@@ -86,7 +86,7 @@ function bringData(type, selection){
     }
 }
 function bringSelfData(){
-    bringDiv('.actions', step2);
+    bringDiv('.actions', step2, false);
 }
 function bringOtherData(type, selection, o_step2){
     prepareOption(type, selection);
@@ -103,52 +103,58 @@ function bringOtherData(type, selection, o_step2){
     bringDiv('.o_actions', o_step2, true);
 }
 function bringDiv(where, s_step2, readonly){
-    $(where).empty();
+    var div = $('<div>').addClass(where.substring(1)).sortable().disableSelection();
     for(let i in s_step2.actions){
-        if(s_step2.actions.length==0) return;
-        else if(s_step2.actions[i].type == "msg"){
+        if(s_step2.actions[i].type == "msg"){
             var $tmp = $('.Tdialog').clone();
-            $tmp.appendTo(where).removeClass().addClass('dialog');
+            $tmp.appendTo(div).removeClass().addClass('dialog');
             $tmp.find('input[name="speaker"]').val(s_step2.actions[i].speaker);
             $tmp.find('input[name="content"]').val(s_step2.actions[i].msg);
-            $tmp.find('.delete').bind("click", function(){
-                if(confirm("真的要刪掉這個動作嗎OAO")){
-                    $(this).parent().remove();
-                    saveData();
-                }
-            });
+            if(!readonly){
+                $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
+                    if(confirm("真的要刪掉這個動作嗎OAO")){
+                        $(this).parent().remove();
+                        saveData();
+                    }
+                }));
+            }
             $tmp.show();
         }
         else if(s_step2.actions[i].type == "scene"){
             var $tmp = $('.Tchgscene').clone();
-            $tmp.appendTo(where).removeClass().addClass('chgscene');
+            $tmp.appendTo(div).removeClass().addClass('chgscene');
             $tmp.find('option[value="'+s_step2.actions[i].SID+'"]').prop('selected', 'selected');
-            $tmp.find('.delete').bind("click", function(){
-                if(confirm("真的要刪掉這個動作嗎OAO")){
-                    $(this).parent().remove();
-                    saveData();
-                }
-            });
+            if(!readonly){
+                $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
+                    if(confirm("真的要刪掉這個動作嗎OAO")){
+                        $(this).parent().remove();
+                        saveData();
+                    }
+                }));
+            }
             $tmp.show();
         }
         else if(s_step2.actions[i].type == "var"){
             var $tmp = $('.Tvariable').clone();
-            $tmp.appendTo(where).removeClass().addClass('variable');
+            $tmp.appendTo(div).removeClass().addClass('variable');
             $tmp.find('input[name="variable"]').val(s_step2.actions[i].name);
             $tmp.find('input[name="value"]').val(s_step2.actions[i].value);
-            $tmp.find('.delete').bind("click", function(){
-                if(confirm("真的要刪掉這個動作嗎OAO")){
-                    $(this).parent().remove();
-                    saveData();
-                }
-            });
+            if(!readonly){
+                $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
+                    if(confirm("真的要刪掉這個動作嗎OAO")){
+                        $(this).parent().remove();
+                        saveData();
+                    }
+                }));
+            }
             $tmp.show();
         }
         bindEvent(s_step2.actions[i].type);
     }
-    if(readonly){
-        $(where).append($('<div>').addClass('o_div'));
+    if(readonly && s_step2.actions.length>0){
+        div.append($('<div>').addClass('o_div'));
     }
+    $(where).replaceWith(div);
 }
 
 //prepare options
@@ -185,7 +191,8 @@ function prepareOption(type, id){
 function transData(){
     var result = [];
     $('.actions').children().each(function(){
-        if($(this).hasClass('dialog')){
+        if($(this).hasClass('ui-sortable-placeholder')) return;
+        else if($(this).hasClass('dialog')){
             var speaker = $(this).find('input[name="speaker"]').val();
             var msg = $(this).find('input[name="content"]').val();
             result.push({
@@ -277,21 +284,33 @@ function start(){
     //change tab
     $('#tb1').on( "click", function(e){
         if(!$('#tb1').hasClass('tab_active')){
-            if(confirm("真的要換到另一個分頁嗎? 編輯過的動作會通通不見喔(´・ω・｀)")){
-                clearData(true);
-                bringData(type, selection);    
+            if(step2.actions.length>0){
+                if(confirm("真的要換到另一個分頁嗎? 編輯過的動作會通通不見喔(´・ω・｀)")){
+                    clearData(true);
+                    bringData(type, selection);    
+                }
+                else return false;
             }
-            else return false;
+            else{
+                clearData(true);
+                bringData(type, selection);
+            }
         }
         else return false;
     });
     $('#tb2').on( "click", function(e){
         if(!$('#tb2').hasClass('tab_active')){
-            if(confirm("真的要換到另一個分頁嗎? 編輯過的動作會通通不見喔(´・ω・｀)")){
-                clearData(false);
-                bringData(type, selection);    
+            if(step2.actions.length>0){
+                if(confirm("真的要換到另一個分頁嗎? 編輯過的動作會通通不見喔(´・ω・｀)")){
+                    clearData(false);
+                    bringData(type, selection);    
+                }
+                else return false;
             }
-            else return false;
+            else{
+                clearData(false);
+                bringData(type, selection);
+            }
         }
         else return false;
     });
@@ -300,34 +319,34 @@ function start(){
     $('#dialog').on("click", function(){
         var $tmp = $('.Tdialog').clone();
         $tmp.appendTo('.actions').removeClass().addClass('dialog').show();
-        $tmp.find('.delete').bind("click", function(){
+        $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
             if(confirm("真的要刪掉這個動作嗎OAO")){
                 $(this).parent().remove();
                 saveData();
             }
-        });
+        }));
         bindEvent("msg");
     });
     $('#chgscene').on("click", function(){
         var $tmp = $('.Tchgscene').clone();
         $tmp.appendTo('.actions').removeClass().addClass('chgscene').show();
-        $tmp.find('.delete').bind("click", function(){
+        $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
             if(confirm("真的要刪掉這個動作嗎OAO")){
                 $(this).parent().remove();
                 saveData();
             }
-        });
+        }));
         bindEvent("scene");
     });
     $('#variable').on("click", function(){
         var $tmp = $('.Tvariable').clone();
         $tmp.appendTo('.actions').removeClass().addClass('variable').show();
-        $tmp.find('.delete').bind("click", function(){
+        $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
             if(confirm("真的要刪掉這個動作嗎OAO")){
                 $(this).parent().remove();
                 saveData();
             }
-        });
+        }));
         bindEvent("var");
     });
     
@@ -346,10 +365,8 @@ function start(){
     $('.actions').on("sortupdate", function(event, ui){
         saveData();
     });
-    $('.gray select').on("change", function(){
-        saveData();
-    });
-    $('.gray input').on("change", function(){
+
+    $('.gray').on("change", function(){
         saveData();
     });
     
@@ -358,6 +375,9 @@ function start(){
         if(!step2.isSelf && isNaN(parseInt($('#tabs-2').find('option:selected').val()))){
             alert("請先選擇要使用的動作！");
             return;
+        }
+        if(step2.isSelf){
+            saveData();
         }
         var data = {
             init: init,
@@ -434,7 +454,7 @@ function start(){
 </form>
 <div style="display:none;" class="Tdialog">
     <div class="gray">
-        <input type=text name="speaker" placeholder="人名"></input>說：<input type=text name="content"></input></div><div class="delete">X</div>
+        <input type=text name="speaker" placeholder="人名"></input>說：<input type=text name="content"></input></div>
 </div>
 <div style="display:none;" class="Tchgscene">
     <div class="gray">
@@ -443,11 +463,11 @@ function start(){
                     <% for(let i in scenes){ if(locals.SID!=scenes[i].SID){%>
                         <option value=<%= scenes[i].SID %>><%= scenes[i].name %></option>
                     <%}}%>
-                </select></div><div class="delete">X</div>
+                </select></div>
 </div>
 <div style="display:none;" class="Tvariable">
     <div class="gray">
-        把<input type=text name="variable" placeholder="參數名稱"></input>的值設為<input type=text name="value"></input></div><div class="delete">X</div>
+        把<input type=text name="variable" placeholder="參數名稱"></input>的值設為<input type=text name="value"></input></div>
 </div>
 </body>
 </html>   

@@ -63,6 +63,7 @@ var db = {
     },
     rollback: function(error){
         return new Promise(function(resolve, reject) {
+            console.error(error);
             console.log('rollback');
             connection.rollback(function(err) {
                 reject(err);
@@ -157,23 +158,28 @@ var db = {
     updateEditSceneInfo: function(SID, GID, info) {
         return db.beginTransaction()
             .then(function() {
-                return Promise.slowAll([db.deleteItems(SID), db.deleteSceneMap(SID), db.updateSceneInfo(SID, info.name, info.bgd_img)]);
+                return Promise.slowAll([db.getItemStamp(SID), db.getMapStamp(SID)]);
+            })
+            .then(function(data) {
+                itemStamp = parseInt(data[0]) + 1;
+                mapStamp = parseInt(data[1]) + 1;
+                return Promise.slowAll([db.updateSceneItems(SID, info.imgs, itemStamp), db.updateSceneMaps(SID, info.map, mapStamp), db.updateSceneInfo(SID, info.name, info.bgd_img)])
+                    .then(function() {
+                        return Promise.slowAll([db.deleteItem(SID, itemStamp), db.deleteMap(SID, mapStamp)]);
+                    });
             })
             .then(function() {
-                return Promise.slowAll([db.insertItems(SID, info.imgs), db.insertSceneMap(SID, info.map)])
-                    .then(function() {
-                        return db.query('UPDATE game SET last_edit=NOW() WHERE GID=?;', [GID]);
-                    });
+                return db.query('UPDATE game SET last_edit=NOW() WHERE GID=?;', [GID]);
             })
             .then(function() {return db.commit();}, function(error){return db.rollback(error);});
     },
     insertEditSceneInfo: function(GID, info) {
         return db.beginTransaction()
             .then(function(){
-                return db.query('INSERT INTO scene(GID, name, img) VALUES(?, ?, ?);', [GID, info.name, info.bgd_img])
+                return db.query('INSERT INTO scene(GID, name, img, stamp) VALUES(?, ?, ?, 0);', [GID, info.name, info.bgd_img]);
             })
             .then(function(results, fields) {
-                return Promise.slowAll([db.insertItems(results.insertId, info.imgs), db.insertSceneMap(results.insertId, info.map)])
+                return Promise.slowAll([db.updateSceneItems(results.insertId, info.imgs, 0), db.updateSceneMaps(results.insertId, info.map, 0)])
                     .then(function() {
                         return db.query('UPDATE game SET last_edit=NOW() WHERE GID=?;', [GID]);
                     });
@@ -195,54 +201,114 @@ var db = {
                 return results;
             });
     },
-    deleteItems: function(SID) {
-        return db.query('DELETE FROM scene_items WHERE SID=?;', [SID]);
-    },
-    insertItems: function(SID, items) {
+    updateSceneItems: function(SID, items, stamp) {
         let prevPromise = Promise.resolve();
         for(let i in items){
             prevPromise = prevPromise.then(function() {
-                if(items[i].AID){
-                    return db.query('INSERT INTO scene_items(SID, type, x, y, AID, imgurl, name) VALUES(?, "image", ?, ?, ?, ?, ?);', [SID, items[i].x, items[i].y, items[i].AID, items[i].src, items[i].name]);
+                var itemID = parseInt(items[i].id);
+                if(isNaN(itemID) || itemID == 0){
+                    return db.insertItem(SID, items[i], stamp);
                 }
                 else{
-                    return db.query('INSERT INTO scene_items(SID, type, x, y, imgurl, name) VALUES(?, "image", ?, ?, ?, ?);', [SID, items[i].x, items[i].y, items[i].src, items[i].name]);
-                    //return db.query('INSERT INTO scene_items(SID, type, x, y, imgurl, name) VALUES(?, "image", ?, ?, ?, ?);', [SID, items[i].x, items[i].y, items[i].name]);
+                    return db.updateItem(items[i], stamp);
                 }
             });
         }
         return prevPromise;
     },
+    updateItem: function(item, stamp) {
+        return db.query('UPDATE scene_items SET x=?, y=?, imgurl=?, name=?, stamp=? WHERE id=?;', [item.x, item.y, item.src, item.name, stamp, item.id]);
+    },
+    insertItem: function(SID, item, stamp) {
+        return db.query('INSERT INTO scene_items(SID, type, x, y, imgurl, name, stamp) VALUES(?, "image", ?, ?, ?, ?, ?);', [SID, item.x, item.y, item.src, item.name, stamp]);
+        //return db.query('INSERT INTO scene_items(SID, type, x, y, imgurl, name) VALUES(?, "image", ?, ?, ?, ?);', [SID, items[i].x, items[i].y, items[i].name]);
+    },
+    getItemStamp: function(SID) {
+        return db.query('SELECT stamp FROM scene_items WHERE SID=?;', [SID])
+            .then(function(results, fields) {
+                if(results.length > 0){
+                    return results[0].stamp;
+                }
+                else{
+                    return -1;
+                }
+            });
+    },
+    deleteItem: function(SID, stamp) {
+        return db.query('SELECT AID FROM scene_items WHERE SID=? AND stamp<>?;', [SID, stamp])
+            .then(function(results, fields){
+                let prevPromise = Promise.resolve();
+                for(let i in results){
+                    prevPromise = prevPromise.then(function() {
+                        return db.query('DELETE FROM action WHERE AID=?;', [results[i].AID]);
+                    });
+                }
+                return prevPromise;
+            })
+            .then(function() {
+                return db.query('DELETE FROM scene_items WHERE SID=? AND stamp<>?;', [SID, stamp]);
+            });
+    },     
     getSceneMap: function(SID) {
         return db.query('SELECT id, name, coords, AID FROM scene_map WHERE SID=?;', [SID])
             .then(function(results, fields) {
                 return results;
             });
     },
-    deleteSceneMap: function(SID) {
-        return db.query('DELETE FROM scene_map WHERE SID=?;', [SID]);
-    },
-    insertSceneMap: function(SID, map){
+    updateSceneMaps: function(SID, maps, stamp) {
         let prevPromise = Promise.resolve();
-        for(let i in map){
+        for(let i in  maps){
             prevPromise = prevPromise.then(function() {
-                if(map[i].AID){
-                    return db.query('INSERT INTO scene_map(SID, name, shape, coords, AID) VALUES(?, ?, "poly", ?, ?);', [SID, map[i].name, map[i].coord, map[i].AID]);
+                var mapID = parseInt(maps[i].id);
+                if(isNaN(mapID) || mapID == 0){
+                    return db.insertMap(SID, maps[i], stamp);
                 }
                 else{
-                    return db.query('INSERT INTO scene_map(SID, name, shape, coords) VALUES(?, ?, "poly", ?);', [SID, map[i].name, map[i].coord]);
+                    return db.updateMap(maps[i], stamp);
                 }
             });
         }
         return prevPromise;
     },
+    updateMap: function(map, stamp) {
+        return db.query('UPDATE scene_map SET name=?, coords=?, stamp=? WHERE id=?;', [map.name, map.coord, stamp, map.id]);
+    },
+    insertMap: function(SID, map, stamp) {
+        return db.query('INSERT INTO scene_map(SID, name, shape, coords, stamp) VALUES(?, ?, "poly", ?, ?);', [SID, map.name, map.coord, stamp]);
+    },
+    getMapStamp: function(SID) {
+        return db.query('SELECT stamp FROM scene_map WHERE SID=?;', [SID])
+            .then(function(results, fields) {
+                if(results.length > 0){
+                    return results[0].stamp;
+                }
+                else{
+                    return -1;
+                }
+            });
+    },
+    deleteMap: function(SID, stamp) {
+        return db.query('SELECT AID FROM scene_map WHERE SID=? AND stamp<>?;', [SID, stamp])
+            .then(function(results, fields){
+                let prevPromise = Promise.resolve();
+                for(let i in results){
+                    prevPromise = prevPromise.then(function() {
+                        return db.query('DELETE FROM action WHERE AID=?;', [results[i].AID]);
+                    });
+                }
+                return prevPromise;
+            })
+            .then(function() {
+                return db.query('DELETE FROM scene_map WHERE SID=? AND stamp<>?;', [SID, stamp]);
+            });
+    },            
     getEditActionInfo: function(SID, GID){
         return Promise.all([db.getEditSceneInfo(SID), db.getActions(SID), db.getScenes(GID)])
             .then(function(results, fields) {
                 return results;
             });
     },
-    updateEditActionInfo: function(SID, data, GID){
+    updateEditActionInfo: function(SID, data, GID) {
         map = data.map;
         item = data.item;
         init = data.init;

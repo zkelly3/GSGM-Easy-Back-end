@@ -98,18 +98,19 @@
 .action{
     min-height: 0px;
 }
-.o_action{
+.o_actions{
     min-height: 0px;
     overflow: hidden;
     position: relative;
 }
 .o_div{
     height: 100%;
-    width: 100%;
+    width: 565px;
     z-index: 999;
     position: absolute;
     top: 0px;
     left: 0px;
+    background-color: rgba(200, 200, 200, 0.5);
 }
 .variable{
     height:50px;

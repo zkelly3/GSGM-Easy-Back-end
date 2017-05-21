@@ -11,9 +11,9 @@
     bottom: 20px;
     height: 20px;
     background-color: rgba(128, 128, 128, 0.5);
-    text-align: center;;
-}
-.box{
+    text-align: center;
+    overflow: hidden;
+    width: 100%;
 }
 .bar{
     text-align: center;
@@ -32,7 +32,7 @@
     <% } %>
                 <div class="col-sm-3">
                     <img src="<%=scenes[i].img%>" class="img-responsive"/>
-                    <div class="onImg"><b><span style="color:white;"><%= scenes[i].name %></span></b></div>
+                    <div class="onImg"><b><span style="color:white;" title="<%= scenes[i].name %>"><%= scenes[i].name %></span></b></div>
                     <div class="row bar"><a href="/e_scene/<%= GID %>/<%= scenes[i].SID %>">設定圖片</a> | <a href="/e_action/<%= GID %>/<%= scenes[i].SID %>">設定動作</a></div>
                 </div>
     <% if(i % 4 == 3 || i == scenes.length-1) { %>

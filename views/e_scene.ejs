@@ -123,7 +123,7 @@ function handleMouseOut(e){
 /* add area or image */
 
 function addArea() {
-    $('table.area').append('<tr><td class="A_number">1.</td><td><p></p></td><td><input type="text" maxlength="50" name="mapname" required/></td><td><a href="javascript: void(0)" class="edit">編輯</a> <a href="javascript: void(0)" class="finish" style="display:none;">完成</a> <a href="javascript: void(0)" class="del_A">刪除</a> <a href="javascript: void(0)" class="clear" style="display:none;">清除</a> <input type=hidden name="mapAID" value=""><input type=hidden name="mapAID" value=""><input type=hidden name="coord" value="[]" maxlength="500"/></td></tr>');
+    $('table.area').append('<tr><td class="A_number">1.</td><td><p></p></td><td><input type="text" maxlength="50" name="mapname"/></td><td><a href="javascript: void(0)" class="edit">編輯</a> <a href="javascript: void(0)" class="finish" style="display:none;">完成</a> <a href="javascript: void(0)" class="del_A">刪除</a> <a href="javascript: void(0)" class="clear" style="display:none;">清除</a> <input type=hidden name="mapAID" value=""><input type=hidden name="mapAID" value=""><input type=hidden name="coord" value="[]" maxlength="500"/><input type=hidden name="mapid" value=""></td></tr>');
     $('.del_A').bind("click", function(){
         if(confirm("確定要刪掉嗎D:")){
             $(this).parent().parent().remove();
@@ -169,7 +169,7 @@ function addArea() {
 }
 
 function addImg() {
-    $('table.img').append('<tr><td class="I_number">1.</td><td><input type="text" name="src" maxlength="200"/></td><td><input type="number" name="x" step="1" max="99999" min="0"/></td><td><input type="number" name="y" step="1" max="99999" min="0" required/></td><td><input type="text" name="imgname" maxlength="50" required/></td><td><a href="javascript: void(0)" class="del_I">刪除</a> <input type=hidden name="imgAID" value=""></td></tr>');
+    $('table.img').append('<tr><td class="I_number">1.</td><td><input type="text" name="src" maxlength="200"/></td><td><input type="number" name="x" step="1" max="99999" min="0"/></td><td><input type="number" name="y" step="1" max="99999" min="0"/></td><td><input type="text" name="imgname" maxlength="50"/></td><td><a href="javascript: void(0)" class="del_I">刪除</a> <input type=hidden name="imgAID" value=""><input type=hidden name="imgid" value=""></td></tr>');
     $('.del_I').bind("click", function(){
         if(confirm("真的要刪掉嗎D:")){
             $(this).parent().parent().remove();
@@ -183,6 +183,62 @@ function addImg() {
     });
 }
 
+function serial2Obj(objarr){
+    var obj = {};
+    for(let i in objarr){
+        obj[objarr[i].name] = objarr[i].value;
+    }
+    var info = {};
+    info.name = obj.name;
+    info.bgd_img = obj.bgd_img;
+    info.map = [];
+    if(typeof(obj.coord)==='string' && (obj.coord!='' || obj.mapname!='')){
+        info.map.push({
+            coord: obj.coord,
+            name: obj.mapname,
+            AID: obj.mapAID,
+            id: obj.mapid
+        });
+    }
+    else if(typeof(obj.coord)==='object'){
+        for(let i in obj.coord){
+            if(obj.coord[i]!='' || obj.mapname[i]!=''){    
+                info.map.push({
+                    coord: obj.coord[i],
+                    name: obj.mapname[i],
+                    AID: obj.mapAID[i],
+                    id: obj.mapid[i]
+                });
+            }
+        }
+    }
+    info.imgs = [];
+    if(typeof(obj.src)==='string' && (obj.src!='' || obj.x!='' || obj.y!='' || obj.imgname!='')){
+        info.imgs.push({
+            src: obj.src,
+            x: obj.x,
+            y: obj.y,
+            name: obj.imgname,
+            AID: obj.imgAID,
+            id: obj.imgid
+        });
+    }
+    else if(typeof(obj.src)==='object'){
+        for(let i in obj.src){
+            if(obj.src[i]!='' || obj.x[i]!='' || obj.y[i]!='' || obj.imgname[i]!=''){    
+                info.imgs.push({
+                    src: obj.src[i],
+                    x: parseInt(obj.x[i]),
+                    y: parseInt(obj.y[i]),
+                    name: obj.imgname[i],
+                    AID: obj.imgAID[i],
+                    id: obj.imgid[i]
+                });
+            }
+        }
+    }
+    return info;
+}
 
 function coordString(coord) {
     var result = "";
@@ -251,6 +307,24 @@ function init() {
     $('#Canvas').mousemove(handleMouseMove);
     $('#Canvas').mouseup(handleMouseUp);
     $('#Canvas').mouseout(handleMouseOut);
+    
+    $('#e_form').submit(function(e){
+        var info = serial2Obj($(this).serializeArray());
+        console.log(info);
+        for(let i in info.map){
+            if(info.map[i].coord=="[]" || info.map[i].name.trim()==""){
+                alert("你有地方沒填寫完全!!");
+                return false;
+            }
+        }
+        for(let i in info.imgs){
+            if(info.imgs[i].x=="" || info.imgs[i].y=="" || info.imgs[i].name.trim()==""){
+                alert("你有地方沒填寫完全!!");
+                return false;
+            }
+        }
+        return true;
+    });
 }
 
 var img = new Image();
@@ -265,8 +339,9 @@ img.onload = function(){
     ctx.globalAlpha = 1;
     off = $('#Canvas').offset();
 };
+    
 </script>
-<form method="post">
+<form method="post" id="e_form">
     <ul><h4><b>《基本設定》</b></h4>
         <ul><b>場景名稱：</b><input type=text name="name" value="<%= locals.scene.name %>" class="form-control" style="width:30%;"/></ul>
         <ul><b>背景圖片網址：</b><input type=text name="bgd_img" value="<%= locals.scene.bgd_img %>" class="form-control" style="width:30%;"/></ul>
@@ -283,26 +358,28 @@ img.onload = function(){
             <tr>
                 <td class="A_number"><%= parseInt(i)+1 %>.</td>
                 <td><p><%= locals.scene.map[i].coordString %></p></td>
-                <td><input type="text" name="mapname" maxlength="50" value="<%= locals.scene.map[i].name %>" required/></td>
+                <td><input type="text" name="mapname" maxlength="50" value="<%= locals.scene.map[i].name %>"/></td>
                 <td><a href="javascript: void(0)" class="edit">編輯</a>
                 <a href="javascript: void(0)" class="finish" style="display:none;">完成</a>
                 <a href="javascript: void(0)" class="del_A">刪除</a>
                 <a href="javascript: void(0)" class="clear" style="display:none;">清除</a>
                 <input type=hidden name="mapAID" value=<%= locals.scene.map[i].AID %>>
-                <input type=hidden name="coord" value="<%= locals.scene.map[i].coord %>" maxlength="500"/></td>
+                <input type=hidden name="coord" value="<%= locals.scene.map[i].coord %>" maxlength="500"/>
+                <input type=hidden name="mapid" value=<%= locals.scene.map[i].id %>></td>
             </tr>
                 <% } %>
             <% } else { %>
             <tr>
                 <td class="A_number">1.</td>
                 <td><p></p></td>
-                <td><input type="text" name="mapname" maxlength="50" required/></td>
+                <td><input type="text" name="mapname" maxlength="50"/></td>
                 <td><a href="javascript: void(0)" class="edit">編輯</a>
                 <a href="javascript: void(0)" class="finish" style="display:none;">完成</a>
                 <a href="javascript: void(0)" class="del_A">刪除</a>
                 <a href="javascript: void(0)" class="clear" style="display:none;">清除</a>
                 <input type=hidden name="mapAID" value="">
-                <input type=hidden name="coord" maxlength="500" value="[]"/></td>
+                <input type=hidden name="coord" maxlength="500" value="[]"/>
+                <input type=hidden name="mapid" value=""></td>
             </tr>
             <% } %>
         </table></ul>
@@ -321,9 +398,10 @@ img.onload = function(){
                 <td><input type="text" name="src" maxlength="200" value="<%= locals.scene.imgs[i].src %>"/></td>
                 <td><input type="number" name="x" max="99999" min="0" step="1" value="<%= locals.scene.imgs[i].x %>"/></td>
                 <td><input type="number" name="y" max="99999" min="0" step="1" value="<%= locals.scene.imgs[i].y %>"/></td>
-                <td><input type="text" name="imgname" maxlength="50" value="<%= locals.scene.imgs[i].name %>" required/></td>
+                <td><input type="text" name="imgname" maxlength="50" value="<%= locals.scene.imgs[i].name %>"/></td>
                 <td><a href="javascript: void(0)" class="del_I">刪除</a>
-                <input type=hidden name="imgAID" value=<%= locals.scene.imgs[i].AID %>></td>
+                <input type=hidden name="imgAID" value=<%= locals.scene.imgs[i].AID %>>
+                <input type=hidden name="imgid" value=<%= locals.scene.imgs[i].id %>></td>
             </tr>
                 <% } %>
             <% } else { %>
@@ -332,9 +410,10 @@ img.onload = function(){
                 <td><input type="text" name="src" maxlength="200"/></td>
                 <td><input type="number" name="x" step="1" max="99999" min="0"/></td>
                 <td><input type="number" name="y" step="1" max="99999" min="0"/></td>
-                <td><input type="text" name="imgname" maxlength="50" required/></td>
+                <td><input type="text" name="imgname" maxlength="50"/></td>
                 <td><a href="javascript: void(0)" class="del_I">刪除</a>
-                <input type=hidden name="imgAID" value=""></td>
+                <input type=hidden name="imgAID" value="">
+                <input type=hidden name="imgid" value=""></td>
             </tr>
             <% } %>
         </table></ul>

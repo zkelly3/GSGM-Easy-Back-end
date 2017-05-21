@@ -122,7 +122,8 @@ app.get('/e_scene/:GID/:SID', auth, gameAuth, function(req, res) {
                     coord: JSON.stringify(coord),
                     coordString: coordString(coord),
                     name: data[2][i].name,
-                    AID: data[2][i].AID
+                    AID: data[2][i].AID,
+                    id: data[2][i].id
                 });
             }
             scene.map = map;
@@ -133,7 +134,8 @@ app.get('/e_scene/:GID/:SID', auth, gameAuth, function(req, res) {
                     x: data[1][i].x,
                     y: data[1][i].y,
                     name: data[1][i].name,
-                    AID: data[1][i].AID
+                    AID: data[1][i].AID,
+                    id: data[1][i].id
                 });
             }
             scene.imgs = imgs;
@@ -287,6 +289,7 @@ app.post('/new_info/', auth, function(req, res) {
 });
 app.post('/e_scene/:GID/:SID', auth, gameAuth, function(req, res) {
     var info = wrapSceneInfo(req);
+    console.log(info);
     db.updateEditSceneInfo(req.params.SID, req.params.GID, info)
     .then(function() {
             req.session.error = false;
@@ -294,7 +297,7 @@ app.post('/e_scene/:GID/:SID', auth, gameAuth, function(req, res) {
         }, function(){
             req.session.error = true;
             res.redirect('/e_scene/' + req.params.GID + '/' + req.params.SID);
-        })
+        });
 });
 app.post('/new_scene/:GID', auth, gameAuth, function(req, res) {
     var info = wrapSceneInfo(req);
@@ -327,7 +330,8 @@ function wrapSceneInfo(req){
         info.map.push({
             coord: req.body.coord,
             name: req.body.mapname,
-            AID: req.body.mapAID
+            AID: req.body.mapAID,
+            id: req.body.mapid
         });
     }
     else if(typeof(req.body.coord)==='object'){
@@ -336,7 +340,8 @@ function wrapSceneInfo(req){
                 info.map.push({
                     coord: req.body.coord[i],
                     name: req.body.mapname[i],
-                    AID: req.body.mapAID[i]
+                    AID: req.body.mapAID[i],
+                    id: req.body.mapid[i]
                 });
             }
         }
@@ -348,7 +353,8 @@ function wrapSceneInfo(req){
             x: req.body.x,
             y: req.body.y,
             name: req.body.imgname,
-            AID: req.body.imgAID
+            AID: req.body.imgAID,
+            id: req.body.imgid
         });
     }
     else if(typeof(req.body.src)==='object'){
@@ -359,7 +365,8 @@ function wrapSceneInfo(req){
                     x: parseInt(req.body.x[i]),
                     y: parseInt(req.body.y[i]),
                     name: req.body.imgname[i],
-                    AID: req.body.imgAID[i]
+                    AID: req.body.imgAID[i],
+                    id: req.body.imgid[i]
                 });
             }
         }
