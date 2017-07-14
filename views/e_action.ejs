@@ -9,17 +9,63 @@
 <link rel="stylesheet" type="text/css" href="/static/e_action.css"/>
 <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 <script>
 var param;
 var init = $.parseJSON('<%-JSON.stringify(locals.init)%>');
 var map = $.parseJSON('<%-JSON.stringify(locals.map)%>');
 var item = $.parseJSON('<%-JSON.stringify(locals.item)%>');
-var scenes = $.parseJSON('<%-JSON.stringify(locals.scene)%>');
+var scenes = $.parseJSON('<%-JSON.stringify(locals.scenes)%>');
 var step2;
 var options = [];
 var type;
 var selection;
+var source;
+
+
+//make things sortable
+function dragenter(e) {
+    e.stopPropagation();
+    $('.poked').removeClass('poked');
+    $(this).addClass('poked');
+    source.insertAfter($('.poked'));
+}
+
+function dragstart(e) {
+    $('.chooseact').hide();
+    $('.delete').show();
+    e.stopPropagation();
+    source = $(this);
+    source.hide(5);
+}
+
+function dragend(e) {
+    e.stopPropagation();
+    $('.poked').removeClass('poked'); 
+    source.show();
+    $('.delete').hide();
+    $('.chooseact').show();
+    saveData();
+}
+function dropdelete(e) {
+    if(confirm("真的要把動作方塊丟掉嗎:O")){
+        source.remove();
+        $('.poked').removeClass('poked'); 
+        $('.delete').hide();
+        $('.chooseact').show();
+        saveData();
+    }
+}
+function sortable() {
+    //bind sortable
+    $('.indent-block:not(:has(.indent-title))').prepend($('<div>').addClass('indent-title'));
+    $('.expression').attr('draggable', 'true')
+        .bind("dragstart", dragstart)
+        .bind("dragend", dragend);
+    $('.title, .expression, .indent-title').bind("dragenter", dragenter);
+    $('input').attr('draggable', 'true').bind('dragstart', function(e) {
+        return false;
+    });
+}
 
 //get index by id
 function getIndex(id, arr){
@@ -86,7 +132,8 @@ function bringData(type, selection){
     }
 }
 function bringSelfData(){
-    bringDiv('.actions', step2, false);
+    bringDiv($('.actions'), 'actions', step2.actions, false);
+    bindEvents($('.actions'), 'actions');
 }
 function bringOtherData(type, selection, o_step2){
     prepareOption(type, selection);
@@ -100,61 +147,84 @@ function bringOtherData(type, selection, o_step2){
             $('#tabs-2').find('select[name="useothers"]').append($('<option>').val(i).text(options[i].name).prop('selected', 'selected'));
         }
     }
-    bringDiv('.o_actions', o_step2, true);
+    bringDiv($('.o_actions'), 'o_actions', o_step2.actions, true);
 }
-function bringDiv(where, s_step2, readonly){
-    var div = $('<div>').addClass(where.substring(1)).sortable().disableSelection();
-    for(let i in s_step2.actions){
-        if(s_step2.actions[i].type == "msg"){
-            var $tmp = $('.Tdialog').clone();
-            $tmp.appendTo(div).removeClass().addClass('dialog');
-            $tmp.find('input[name="speaker"]').val(s_step2.actions[i].speaker);
-            $tmp.find('input[name="content"]').val(s_step2.actions[i].msg);
-            if(!readonly){
-                $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
-                    if(confirm("真的要刪掉這個動作嗎OAO")){
-                        $(this).parent().remove();
-                        saveData();
-                    }
-                }));
-            }
-            $tmp.show();
-        }
-        else if(s_step2.actions[i].type == "scene"){
-            var $tmp = $('.Tchgscene').clone();
-            $tmp.appendTo(div).removeClass().addClass('chgscene');
-            $tmp.find('option[value="'+s_step2.actions[i].SID+'"]').prop('selected', 'selected');
-            if(!readonly){
-                $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
-                    if(confirm("真的要刪掉這個動作嗎OAO")){
-                        $(this).parent().remove();
-                        saveData();
-                    }
-                }));
-            }
-            $tmp.show();
-        }
-        else if(s_step2.actions[i].type == "var"){
-            var $tmp = $('.Tvariable').clone();
-            $tmp.appendTo(div).removeClass().addClass('variable');
-            $tmp.find('input[name="variable"]').val(s_step2.actions[i].name);
-            $tmp.find('input[name="value"]').val(s_step2.actions[i].value);
-            if(!readonly){
-                $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
-                    if(confirm("真的要刪掉這個動作嗎OAO")){
-                        $(this).parent().remove();
-                        saveData();
-                    }
-                }));
-            }
-            $tmp.show();
-        }
-        bindEvent(s_step2.actions[i].type);
+function bringDiv(where, typename, actions, readonly){
+    var div = $('<div>').addClass(typename);
+    if(typename == 'actions' || typename == 'o_actions'){
+        div.append($('<div>').addClass('title').text('程式由此開始執行：'));
     }
-    if(readonly && s_step2.actions.length>0){
+    else if(typename == 'indent-block'){
+        div.append($('<div>').addClass('indent-title'));
+    }
+    for(let i in actions){
+        if(actions[i].type == "msg"){
+            var $tmp = $('.Tdialog').clone();
+            $tmp.appendTo(div).removeClass('Tdialog').addClass('dialog');
+            $tmp.find('input[name="speaker"]').val(actions[i].speaker);
+            $tmp.find('input[name="content"]').val(actions[i].msg);
+        }
+        else if(actions[i].type == "scene"){
+            var $tmp = $('.Tchgscene').clone();
+            $tmp.appendTo(div).removeClass('Tchgscene').addClass('chgscene');
+            $tmp.find('option[value="'+actions[i].SID+'"]').prop('selected', 'selected');
+        }
+        else if(actions[i].type == "get"){
+            var $tmp = $('.Tgetitem').clone();
+            $tmp.appendTo(div).removeClass('Tgetitem').addClass('getitem');
+            $tmp.find('.getinput').val(actions[i].item);
+        }
+        else if(actions[i].type == "lose"){
+            var $tmp = $('.Tloseitem').clone();
+            $tmp.appendTo(div).removeClass('Tloseitem').addClass('loseitem');
+            $tmp.find('.loseinput').val(actions[i].item);
+        }
+        else if(actions[i].type == "flag"){
+            var $tmp = $('.Tsetflag').clone();
+            $tmp.appendTo(div).removeClass('Tsetflag').addClass('setflag');
+            $tmp.find('.flaginput').val(actions[i].flag);
+        }
+        else if(actions[i].type == "ifelse"){
+            var $tmp = $('.Tifelse').clone();
+            $tmp.appendTo(div).removeClass('Tifelse').addClass('ifelse');
+            for(let j in actions[i].cases){
+                var $tmp1;
+                if(j == 0){
+                    $tmp1 = $('.Tif').clone();
+                    $tmp1.appendTo($tmp).removeClass('Tif').addClass('if');
+                    var condlen = actions[i].cases[j].cond.length
+                    for(let k = 1; k < condlen; k++){
+                        $tmp1.find('.conditions').append($('.Tcond').clone().removeClass('Tcond').addClass('cond'));
+                    }
+                    $tmp1.find('.cond').each(function(k){
+                        $(this).find('.condtype').val(actions[i].cases[j].cond[k].type);
+                        $(this).find('.ifvar').val(actions[i].cases[j].cond[k].value);
+                    });
+                }
+                else if(j == actions[i].cases.length-1){
+                    $tmp1 = $('.Telse').clone();
+                    $tmp1.appendTo($tmp).removeClass('Telse').addClass('else');
+                }
+                else{
+                    $tmp1 = $('.Telif').clone();
+                    $tmp1.appendTo($tmp).removeClass('Telif').addClass('elif');
+                    var condlen = actions[i].cases[j].cond.length
+                    for(let k = 1; k < condlen; k++){
+                        $tmp1.find('.conditions').append($('.Tcond').clone().removeClass('Tcond').addClass('cond'));
+                    }
+                    $tmp1.find('.cond').each(function(k){
+                        $(this).find('.condtype').val(actions[i].cases[j].cond[k].type);
+                        $(this).find('.ifvar').val(actions[i].cases[j].cond[k].value);
+                    });
+                }
+                bringDiv($tmp1.find('.indent-block'), 'indent-block', actions[i].cases[j].act, readonly);
+            }
+        }
+    }
+    if(readonly && actions.length>0 && typename!='indent-block'){
         div.append($('<div>').addClass('o_div'));
     }
-    $(where).replaceWith(div);
+    where.replaceWith(div);
 }
 
 //prepare options
@@ -188,11 +258,10 @@ function prepareOption(type, id){
 }
 
 //transform div to data
-function transData(){
+function transData(where){
     var result = [];
-    $('.actions').children().each(function(){
-        if($(this).hasClass('ui-sortable-placeholder')) return;
-        else if($(this).hasClass('dialog')){
+    where.children().each(function(){
+        if($(this).hasClass('dialog')){
             var speaker = $(this).find('input[name="speaker"]').val();
             var msg = $(this).find('input[name="content"]').val();
             result.push({
@@ -208,44 +277,172 @@ function transData(){
                 SID: id
             });
         }
-        else if($(this).hasClass('variable')){
-            var name = $(this).find('input[name="variable"]').val();
-            var value = $(this).find('input[name="value"]').val();
+        else if($(this).hasClass('getitem')){
+            var item = $(this).find('.getinput').val();
             result.push({
-                type: "var",
-                name: name,
-                value: value
+                type: "get",
+                item: item
             });
         }
+        else if($(this).hasClass('loseitem')){
+            var item = $(this).find('.loseinput').val();
+            result.push({
+                type: "lose",
+                item: item
+            });
+        }
+        else if($(this).hasClass('setflag')){
+            var flag = $(this).find('.flaginput').val();
+            result.push({
+                type: "flag",
+                flag: flag
+            });
+        }
+        else if($(this).hasClass('ifelse')){
+            var ifres = {};
+            ifres.type = "ifelse";
+            var cases = [];
+            $(this).children().each(function(){
+                var acase = {}
+                if($(this).hasClass('if') || $(this).hasClass('elif')){
+                    var cond = [];
+                    $(this).children('.conditions').children('.cond').each(function(){
+                        var condtype = $(this).children('.condtype').val();
+                        var ifvar = $(this).children('.ifvar').val();
+                        //if(condtype!="" && ifvar!=""){
+                            cond.push({
+                                "type": condtype,
+                                "value": ifvar
+                            });
+                        //}
+                    });
+                    acase.cond = cond;
+                    acase.act = transData($(this).children('.indent-block'));
+                }
+                else if($(this).hasClass('else')){
+                    acase.act = transData($(this).children('.indent-block'));
+                }
+                cases.push(acase);
+            });
+            ifres.cases = cases;
+            result.push(ifres);
+        }              
     });
-    //console.log(result);
+    console.log(result);
     return result;
 }
 
 function saveData(){
-    step2.actions = transData();
+    step2.actions = transData($('.actions'));
     bringData(type, selection);
 }
 function clearData(isSelf){
     step2.actions = [];
     step2.isSelf = isSelf;
 }  
-     
-function bindEvent(type){
-    if(type=="msg" || type=="var"){
-        $('.gray input').bind("change", function(){
+
+//bind Event
+function bindEvents(where, typename){
+    where.children().each(function(){
+        if($(this).hasClass('dialog')){
+            bindEvent($(this), 'msg');
+        }
+        else if($(this).hasClass('chgscene')){
+            bindEvent($(this), 'scene');
+        }
+        else if($(this).hasClass('getitem')){
+            bindEvent($(this), 'get');
+        }
+        else if($(this).hasClass('loseitem')){
+            bindEvent($(this), 'lose');
+        }
+        else if($(this).hasClass('setflag')){
+            bindEvent($(this), 'flag');
+        }
+        else if($(this).hasClass('ifelse')){
+            bindEvent($(this), 'ifelse');
+        }
+    });
+    if(typename=='actions'){
+        sortable();
+    }
+}
+function bindEvent(which, typename){
+    if(typename=="msg"){
+        which.find('.msginput').bind("change", function(){
             saveData();
         });
     }
-    else if(type=="scene"){
-        $('.gray select').bind("change", function(){
+    else if(typename=="scene"){
+        which.find('.sceneinput').bind("change", function(){
             saveData();
+        });
+    }
+    else if(typename=="get"){
+        which.find('.getinput').bind("change", function(){
+            saveData();
+        });
+    }
+    else if(typename=="lose"){
+        which.find('.loseinput').bind("change", function(){
+            saveData();
+        });
+    }
+    else if(typename=="flag"){
+        which.find('.flaginput').bind("change", function(){
+            saveData();
+        });
+    }
+    else if(typename=="ifelse"){
+        which.find('.condtype').each(function(){
+            bindEvent($(this), 'condtype');
+        });
+        which.find('.ifvar').each(function(){
+            bindEvent($(this), 'ifvar');
+        });
+        which.children('.if, .elif').children('.addcond').each(function(){
+            bindEvent($(this), 'addcond');
+        });
+        bindEvent(which.children('.else').children('.addelif'), 'addelif');
+        bindEvents(which.children('.if, .elif, .else').children('.indent-block'), 'indent-block');
+    }
+    else if(typename=="condtype"){
+        which.bind("change", function(){
+            saveData();
+        });
+    }
+    else if(typename=="ifvar"){
+        which.bind("change", function(){
+            saveData();
+        });
+    }
+    else if(typename=="addcond"){
+        which.bind("click", function(){
+            $tmp = $('.Tcond').clone();
+            $tmp.removeClass('Tcond').addClass('cond').appendTo($(this).siblings('.conditions'));
+            bindEvent($tmp.children('.condtype'), 'condtype');
+            bindEvent($tmp.children('.ifvar'), 'ifvar');
+        });
+    }
+    else if(typename=="addelif"){
+        which.bind("click", function(){
+            $tmp = $('.Telif').clone();
+            $tmp.removeClass('Telif').addClass('elif').insertBefore($(this).closest('.else'));
+            bindEvent($tmp.find('.addcond'), 'addcond');
+            bindEvent($tmp.find('.condtype'), 'condtype');
+            bindEvent($tmp.find('.ifvar'), 'ifvar');
         });
     }
 }
+
+//onload
 function start(){       
-    $('.actions').sortable().disableSelection();
-    
+    $('.delete').on("dragenter", function(e){
+        e.preventDefault();
+    }).on("dragover", function(e){
+        e.preventDefault();
+    }).on("drop", dropdelete);
+       
     //check radio and select
     $('select').on("click", function(){
         $(this).parent().find('input:radio').prop('checked', true).trigger("click");
@@ -318,36 +515,43 @@ function start(){
     //bind event to click buttons
     $('#dialog').on("click", function(){
         var $tmp = $('.Tdialog').clone();
-        $tmp.appendTo('.actions').removeClass().addClass('dialog').show();
-        $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
-            if(confirm("真的要刪掉這個動作嗎OAO")){
-                $(this).parent().remove();
-                saveData();
-            }
-        }));
-        bindEvent("msg");
+        $tmp.appendTo('.actions').removeClass('Tdialog').addClass('dialog');
+        bindEvent($tmp, 'msg');
+        sortable();
     });
     $('#chgscene').on("click", function(){
         var $tmp = $('.Tchgscene').clone();
-        $tmp.appendTo('.actions').removeClass().addClass('chgscene').show();
-        $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
-            if(confirm("真的要刪掉這個動作嗎OAO")){
-                $(this).parent().remove();
-                saveData();
-            }
-        }));
-        bindEvent("scene");
+        $tmp.appendTo('.actions').removeClass('Tchgscene').addClass('chgscene');
+        bindEvent($tmp, 'scene');
+        sortable();
     });
-    $('#variable').on("click", function(){
-        var $tmp = $('.Tvariable').clone();
-        $tmp.appendTo('.actions').removeClass().addClass('variable').show();
-        $tmp.append($('<div>').addClass('delete').text('X').bind("click", function(){
-            if(confirm("真的要刪掉這個動作嗎OAO")){
-                $(this).parent().remove();
-                saveData();
-            }
-        }));
-        bindEvent("var");
+    $('#getitem').on("click", function(){
+        var $tmp = $('.Tgetitem').clone();
+        $tmp.appendTo('.actions').removeClass('Tgetitem').addClass('getitem');
+        bindEvent($tmp, 'get');
+        sortable();
+    });
+    $('#loseitem').on("click", function(){
+        var $tmp = $('.Tloseitem').clone();
+        $tmp.appendTo('.actions').removeClass('Tloseitem').addClass('loseitem');
+        bindEvent($tmp, 'lose');
+        sortable();
+    });
+    $('#setflag').on("click", function(){
+        var $tmp = $('.Tsetflag').clone();
+        $tmp.appendTo('.actions').removeClass('Tsetflag').addClass('setflag');
+        bindEvent($tmp, 'flag');
+        sortable();
+    });
+    $('#ifelse').on("click", function(){
+        var $tmp = $('.Tifelse').clone();
+        var $vif = $('.Tif').clone();
+        var $velse = $('.Telse').clone();
+        $tmp.append($vif.removeClass('Tif').addClass('if'))
+            .append($velse.removeClass('Telse').addClass('else'))
+            .appendTo('.actions').removeClass('Tifelse').addClass('ifelse');
+        bindEvent($tmp, 'ifelse');
+        sortable();
     });
     
     //select others' actions
@@ -361,18 +565,13 @@ function start(){
         bringData(type, selection);
     });
     
-    //on change save data
-    $('.actions').on("sortupdate", function(event, ui){
-        saveData();
-    });
-
-    $('.gray').on("change", function(){
-        saveData();
-    });
-    
     //save data or not
     $('#save').on("click", function(){
-        if(!step2.isSelf && isNaN(parseInt($('#tabs-2').find('option:selected').val()))){
+        if(step2==null){
+            window.location.href = '/scenes/'+<%= locals.GID %>;
+            return;
+        }
+        else if(!step2.isSelf && isNaN(parseInt($('#tabs-2').find('option:selected').val()))){
             alert("請先選擇要使用的動作！");
             return;
         }
@@ -429,11 +628,14 @@ function start(){
                             <div class="actions"></div>
                             <div class="chooseact">
                                 + 選擇動作種類：
-                                <div class="button" id="dialog">顯示對話</div>
-                                <div class="button" id="chgscene">切換場景</div>
-                                <div class="button" id="variable">儲存參數</div>
-                                <div class="button" id="ifelse">條件判斷</div>
+                                <div class="button addbutton" id="dialog">顯示對話</div>
+                                <div class="button addbutton" id="chgscene">切換場景</div>
+                                <div class="button addbutton" id="getitem">取得物品</div>
+                                <div class="button addbutton" id="loseitem">失去物品</div>
+                                <div class="button addbutton" id="setflag">設定進度</div>
+                                <div class="button addbutton" id="ifelse">條件判斷</div>
                             </div>
+                            <div class="delete" style="display:none;">丟棄動作方塊</div>
                             <hr>
                         </div>
                         <div id="tabs-2" style="display:none;">
@@ -448,26 +650,78 @@ function start(){
                 </div>
         </div>
     <div style="height:50px;width:600px;line-height:40px;">
-        <div class="button" style="margin-top:5px;" id="save">儲存</div>
-        <div class="button" style="margin-top:5px;" id="not_save">不編輯了喇</div>
+        <div class="button savebutton" id="save">儲存</div>
+        <div class="button savebutton" id="not_save">不編輯了喇</div>
     </div></ul>
 </form>
-<div style="display:none;" class="Tdialog">
-    <div class="gray">
-        <input type=text name="speaker" placeholder="人名"></input>說：<input type=text name="content"></input></div>
+
+
+<div style="display:none;">
+
+<div class="expression Tdialog">
+    <input type=text name="speaker" placeholder="人名" class="msginput"></input>說：<input type=text name="content" class="msginput"></input>
 </div>
-<div style="display:none;" class="Tchgscene">
-    <div class="gray">
-        切換場景到<select name="chgscene">
-                    <option value="" disabled selected hidden>===選擇場景===</option>
-                    <% for(let i in scenes){ if(locals.SID!=scenes[i].SID){%>
-                        <option value=<%= scenes[i].SID %>><%= scenes[i].name %></option>
-                    <%}}%>
-                </select></div>
+<div class="expression Tchgscene">
+    切換場景到<select name="chgscene" class="sceneinput">
+                <option value="" disabled selected hidden>===選擇場景===</option>
+                <% for(let i in scenes){ if(locals.scene.SID!=scenes[i].SID){%>
+                    <option value=<%= scenes[i].SID %>><%= scenes[i].name %></option>
+                <%}}%>
+            </select>
 </div>
-<div style="display:none;" class="Tvariable">
-    <div class="gray">
-        把<input type=text name="variable" placeholder="參數名稱"></input>的值設為<input type=text name="value"></input></div>
+<div class="expression Tgetitem">
+    取得物品：<input type=text name="get" placeholder="物品名稱" class="getinput"></input>
 </div>
+<div class="expression Tloseitem">
+    失去物品：<input type=text name="lose" placeholder="物品名稱" class="loseinput"></input>
+</div>
+<div class="expression Tsetflag">
+    完成進度：<input type=text name="flag" placeholder="進度名稱" class="flaginput"></input>
+</div>
+<div class="expression Tifelse"></div>
+<div class="Tif">
+    如果<span class="conditions">
+        <span class="cond">
+            <select name="if" class="condtype">
+                <option value="" disabled selected hidden>===選擇條件===</option>
+                <option value="item">擁有物品：</option>
+                <option value="progress">完成進度：</option>
+            </select>
+            <input type=text name="ifvar" class="ifvar"></input>
+        </span
+    ></span>
+    <div class="addcond">＋</div>
+    <div class="indent-block"></div>
+</div>
+<div class="Telse">
+    否則<div class="addelif">▼</div>
+    <div class="indent-block"></div>
+</div>
+<div class="Telif">
+    否則如果<span class="conditions">
+        <span class="cond">
+            <select name="if" class="condtype">
+                <option value="" disabled selected hidden>===選擇條件===</option>
+                <option value="item">擁有物品：</option>
+                <option value="progress">完成進度：</option>
+            </select>
+            <input type=text name="ifvar" class="ifvar"></input>
+        </span
+    ></span>
+    <div class="addcond">＋</div>
+    <div class="indent-block"></div>
+</div>
+<span class="Tcond">
+    <select name="if" class="condtype">
+        <option value="" disabled selected hidden>===選擇條件===</option>
+        <option value="item">擁有物品：</option>
+        <option value="progress">完成進度：</option>
+    </select>
+    <input type=text name="ifvar" class="ifvar"></input>
+</span>
+
+</div>
+
+
 </body>
 </html>   

@@ -315,6 +315,15 @@ app.post('/e_action/:GID/:SID', auth, gameAuth, function(req, res) {
     for(let i in data.item){
         if(!data.item[i].step2.actions) data.item[i].step2.actions = [];
     }
+    
+    dealifelse(data.init.step2.actions);
+    for(let i in data.map){
+        dealifelse(data.map[i].step2.actions);
+    }
+    for(let i in data.item){
+        dealifelse(data.item[i].step2.actions);
+    }
+    
     db.updateEditActionInfo(req.params.SID, data, req.params.GID)
         .then(function(){
             res.send({url:'/scenes/'+req.params.GID});
@@ -395,6 +404,40 @@ function findActIndex(AID, actions){
 }
 function str2Bool(str){
     return str===true || str==='true';
+}
+function dealifelse(actions){
+    for(let i in actions){
+        if(actions[i].type=='ifelse'){
+            var j = 0;
+            while(j<actions[i].cases.length-1){
+                var conditions = actions[i].cases[j].cond;
+                var k = 0;
+                while(k<conditions.length){
+                    if(conditions[k].type=="" || conditions[k].value==""){
+                        conditions.splice(k, 1);
+                    }
+                    else{
+                        k++;
+                    }
+                }
+                if(conditions.length==0){
+                    actions[i].cases.splice(j, 1);
+                }
+                else{
+                    j++;
+                }
+            }
+            if(actions[i].cases.length==1){
+                actions[i].cases.splice(0, 0, {
+                    cond: [{
+                        type: "",
+                        value: ""
+                    }],
+                    act: []
+                });
+            }
+        }
+    }
 }
 
 db.connect().then(function() {

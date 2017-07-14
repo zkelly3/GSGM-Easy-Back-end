@@ -74,18 +74,27 @@
     border-radius: 2px;
 }
 .button{
-    height: 30px;
-    width: 100px;
-    border-radius: 5em;
     border: 1px solid gray;
     text-align: center;
-    vertical-align: middle;
     display: inline-block;
     cursor: pointer;
-    line-height: 30px;
 }
 .button:hover{
     background-color: rgba(200, 200, 200, 1);
+}
+.addbutton{
+    height: 20px;
+    width: 65px;
+    border-radius: 1em;
+    line-height: 20px;
+    font-size: small;
+}
+.savebutton{
+    height: 30px;
+    width: 100px;
+    border-radius: 5em;
+    line-height: 30px;
+    margin-top:5px;
 }    
 .chooseact{
     position: relative;
@@ -95,8 +104,21 @@
     left: 10px;
     text-align: center;
 }
-.action{
+.delete{
+    position: relative;
+    top: 15px;
+    height: 40px;
+    width: 550px;
+    left: 10px;
+    text-align: center;
+    color: #707C74;
+}
+.delete:hover{
+    color: #1C1C1C;
+}
+.actions{
     min-height: 0px;
+    width: 565px;
 }
 .o_actions{
     min-height: 0px;
@@ -112,33 +134,83 @@
     left: 0px;
     background-color: rgba(200, 200, 200, 0.5);
 }
-.variable{
-    height:50px;
-    width: 600px;
-}
-.dialog{
-    height:50px;
-    width: 600px;
-}
-.chgscene{
-    height:50px;
-    width: 600px;
-}
-.gray{
-    height: 49px;
+.title{
+    height: 20px;
     width: 565px;
-    background-color:rgba(200, 200, 200, 1);
-    padding-top: 12px;
-    padding-left: 10px;
-    display: inline-block;
-}
-.delete{
-    height: 49px;
-    width: 30px;
-    top: 0px;
-    padding-top: 12px;
-    cursor: pointer;
-    text-align: center;
-    display: inline-block;
     position: relative;
+    text-align: center;
+}
+.poked{
+    margin-bottom: 30px !important;
+}
+.expression{
+    min-height:50px;
+    width: 100%;
+    position: relative;
+    display: inline-block;
+    border-style: solid;
+    border-width: 0.5px 1px 0.5px 1px;
+    border-color: white;
+    background-color:rgba(200, 200, 200, 1);
+    padding: 12px;
+}
+.expression .if {
+    padding: 5px;
+    border-bottom-style: none;
+}
+.expression .elif {
+    padding: 5px;
+}
+.expression .else {
+    padding: 5px;
+    border-top-style: none;
+}
+.indent-block{
+    margin-left: 10px;
+    margin-top: 10px;
+}
+.indent-block:child{
+    width: 100%;
+}
+.indent-title{
+    height: 20px;
+    width: 100%;
+    margin-bottom: -10px;
+}
+.indent-title:only-child{
+    background-color: white;
+    cursor: auto;
+    height: 20px;
+    margin-right: 10px;
+}
+.indent-title:only-child:before {
+    display: block;
+    content: "拖曳放入動作方塊";
+    color: lightgray;
+    line-height: 20px;
+}
+input[type=text]{
+    height: 20px;
+    width: 70px;
+}
+.addcond{
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+span.cond{
+    display: inline-block;
+    line-height: 24px;
+}
+span.cond:not(:first-child):before{
+    content: "　且";
+}
+.addelif{
+    position: absolute;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    right: 20px;
 }
